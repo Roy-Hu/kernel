@@ -38,12 +38,16 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size,
 	initInterruptVectorTable(interruptVectorTable);
 
 	// Initialize the free physical page frames
-	initFreePhysicalPage(&physicalPages, pmem_size, orig_brk);
+	// initFreePhysicalPage(&physicalPages, pmem_size, orig_brk);
 
 	// Initialize the page table
 	initPageTable(&pageTable, orig_brk);
 
 	WriteRegister(REG_VM_ENABLE, 1);
+
+	TracePrintf(5, "Enable vitrual memory\n");
+
+	Halt();
 }
 
 // 3.4.2 Kernel Memory Management

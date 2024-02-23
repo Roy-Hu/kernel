@@ -61,8 +61,6 @@ void initPageTable(PageTable *pageTable, void *orig_brk) {
     TracePrintf(5, "start init Page Table\n");
 
     int orig_brk_pg_num = UP_TO_PAGE(orig_brk) >> PAGESHIFT;
-    pageTable->region0 = (struct pte *)myMalloc(PAGE_TABLE_SIZE);
-    pageTable->region1 = (struct pte *)myMalloc(PAGE_TABLE_SIZE);
 
     int i = 0;
     // a page table entry should be built so that the new vpn = pfn

@@ -11,7 +11,7 @@ typedef struct physicalPage {
 } PhysicalPage;
 
 typedef struct pageTable {
-    struct pte *region0, *region1;
+    struct pte region0[PAGE_TABLE_LEN], region1[PAGE_TABLE_LEN];
 } PageTable;
 
 void *myMalloc(size_t size);
