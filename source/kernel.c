@@ -26,6 +26,10 @@ void initInterruptVectorTable(TrapHandlerPtr *InterruptVectorTable) {
 	InterruptVectorTable[TRAP_TTY_RECEIVE] = &TrapTtyReceiveHandler;
 	InterruptVectorTable[TRAP_TTY_TRANSMIT] = &TrapTtyTransmitHandler;
 
+    // Set the unused entries to NULL
+    int i;
+    for (i = TRAP_TTY_TRANSMIT + 1; i < TRAP_VECTOR_SIZE; i++) InterruptVectorTable[i] = NULL;
+
     // Initialize the REG_VECTOR_BASE privileged machine register to point to your interrupt vector table.
 	WriteRegister(REG_VECTOR_BASE, (RCS421RegVal) InterruptVectorTable);
 }
