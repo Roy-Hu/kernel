@@ -1,13 +1,15 @@
 #include <stdlib.h>
 #include <stdio.h>
+
 #include "kernel.h"
 #include "call.h"
+#include "helper.h"
 
 void *myMalloc(size_t size) {
+    TracePrintf(5, "Try to allocte %d memory\n", size);
     void *ptr = malloc(size);
     if (ptr == NULL) {
-        fprintf(stderr, "malloc failed.\n");
-        Exit(ERROR);
+        TracePrintf(0, "Malloc Failed\n");
     }
     
     return ptr;
@@ -16,8 +18,8 @@ void *myMalloc(size_t size) {
 // Initialize the interrupt vector table entries for each type of interrupt, exception, or trap, by making
 // them point to the correct handler functions in your kernel.
 void initInterruptVectorTable(TrapHandlerPtr *InterruptVectorTable) {
+    TracePrintf(5, "start init Interrupt Vector Table\n");
 
-	InterruptVectorTable = myMalloc(TRAP_VECTOR_SIZE * sizeof(TrapHandlerPtr));
 	InterruptVectorTable[TRAP_KERNEL] = &TrapKernelHandler;
 	InterruptVectorTable[TRAP_CLOCK] = &TrapClockHandler;
 	InterruptVectorTable[TRAP_ILLEGAL] = &TrapIllegalHandler;
@@ -36,19 +38,49 @@ void initInterruptVectorTable(TrapHandlerPtr *InterruptVectorTable) {
 
 // Build a structure to keep track of what page frames in physical memory are free
 void initFreePhysicalPage(PhysicalPage *PhysicalPages, unsigned int pmem_size, void *orig_brk) {
-    int totalPageNum = DOWN_TO_PAGE(pmem_size) >> PAGESHIFT;
-    int orig_brk_pg_num = UP_TO_PAGE(orig_brk) >> PAGESHIFT;
+    TracePrintf(5, "start init Free Physical Page\n");
 
-    PhysicalPages->isFree = myMalloc(totalPageNum * sizeof(bool));
+    int totalPageNum = DOWN_TO_PAGE(pmem_size) >> PAGESHIFT;
+    // int orig_brk_pg_num = UP_TO_PAGE(orig_brk) >> PAGESHIFT;
+
+    PhysicalPages->isFree = (int *)myMalloc(totalPageNum * sizeof(int));
     PhysicalPages->freePageNum = 0;
 
-    int i = 0;
-    for (i = 0; i < totalPageNum; i++) {
+    int pfn = 0;
+    for (pfn = 0; pfn < totalPageNum; pfn++) {
         // The page for kernel stack and kernel heap are not free (According to Fig 4, not very sure about this part.)
-        if (i >= VMEM_0_SIZE - KERNEL_STACK_SIZE && i < VMEM_1_BASE + orig_brk) PhysicalPages->isFree[i] = false;
+        if (pfn >= DOWN_TO_PAGE(KERNEL_STACK_BASE) && pfn < DOWN_TO_PAGE(orig_brk)) PhysicalPages->isFree[pfn] = 0;
         else {
             PhysicalPages->freePageNum++;
-            PhysicalPages->isFree[i] = true;
+            PhysicalPages->isFree[pfn] = 1;
         }
     }
+}
+
+void initPageTable(PageTable *pageTable, void *orig_brk) {
+    TracePrintf(5, "start init Page Table\n");
+
+    int orig_brk_pg_num = UP_TO_PAGE(orig_brk) >> PAGESHIFT;
+    pageTable->region0 = (struct pte *)myMalloc(PAGE_TABLE_SIZE);
+    pageTable->region1 = (struct pte *)myMalloc(PAGE_TABLE_SIZE);
+
+    int i = 0;
+    // a page table entry should be built so that the new vpn = pfn
+
+    // Kernel stack
+    for (i = 0; i < KERNEL_STACK_PAGES; i++) {
+        setPTE(&pageTable->region0[PAGE_TABLE_LEN - 1 - i], PAGE_TABLE_LEN - 1 - i, 1, PROT_NONE, (PROT_READ | PROT_WRITE));
+    }
+
+    for (i = 0; i < orig_brk_pg_num; i++) {
+        // Kernel data/bss/heap
+        setPTE(&pageTable->region1[i], i + PAGE_TABLE_LEN, 1, PROT_NONE, (PROT_READ | PROT_WRITE));
+        
+        // Kernel text
+        if (i * PAGESIZE + VMEM_1_BASE < &_etext) pageTable->region1[i].kprot = (PROT_READ | PROT_EXEC);
+    }
+
+    //Setup REG_PTR0 and REG_PTR1
+	WriteRegister(REG_PTR0, (RCS421RegVal) pageTable->region0);
+	WriteRegister(REG_PTR1, (RCS421RegVal) pageTable->region1);
 }

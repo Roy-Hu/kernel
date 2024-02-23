@@ -4,3 +4,7 @@ yalnix.h
 *.o
 .vscode
 yalnix
+core*
+TTYLOG*
+TRACE
+DISK

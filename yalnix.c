@@ -4,9 +4,11 @@
 
 #include <stdio.h>
 
-TrapHandlerPtr *InterruptVectorTable;
+TrapHandlerPtr interruptVectorTable[TRAP_VECTOR_SIZE];
 
-PhysicalPage PhysicalPages;
+PhysicalPage physicalPages;
+
+PageTable pageTable;
 // 3.3 Kernel Boot Entry Point
 
 // Kernel Start procedure should initialize the operating system kernel and then return,
@@ -29,12 +31,19 @@ PhysicalPage PhysicalPages;
 
 void KernelStart(ExceptionInfo *info, unsigned int pmem_size, 
 	void *orig_brk, char **cmd_args) {
+		
+	TracePrintf(5, "Kernel Start, Total physical memory %d\n", pmem_size);
 	
 	// Initialize the interrupt vector table and REG_VECTOR_BASE privileged machine register
-	initInterruptVectorTable(InterruptVectorTable);
+	initInterruptVectorTable(interruptVectorTable);
 
 	// Initialize the free physical page frames
-	initFreePhysicalPage(&PhysicalPages, pmem_size, orig_brk);
+	initFreePhysicalPage(&physicalPages, pmem_size, orig_brk);
+
+	// Initialize the page table
+	initPageTable(&pageTable, orig_brk);
+
+	WriteRegister(REG_VM_ENABLE, 1);
 }
 
 // 3.4.2 Kernel Memory Management
