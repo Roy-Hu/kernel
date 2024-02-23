@@ -1,4 +1,5 @@
 #include <comp421/hardware.h>
+#include <comp421/yalnix.h>
 
 //  3.1 Yalnix Kernel Calls
 int Fork(void);

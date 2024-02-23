@@ -2,6 +2,8 @@
 
 //  3.2 Interrupt,Exception,and Trap Handling
 
+typedef void (*TrapHandlerPtr)(ExceptionInfo *);
+
 void TrapKernelHandler(ExceptionInfo *info);
 
 void TrapClockHandler(ExceptionInfo *info);

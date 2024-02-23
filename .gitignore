@@ -1,3 +1,6 @@
 hardware.h
 yalnix.h
-load.template
+*.template
+*.o
+.vscode
+yalnix
