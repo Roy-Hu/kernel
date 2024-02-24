@@ -4,18 +4,18 @@
 //  3.1 Yalnix Kernel Calls
 int Fork(void);
 
-int Exec(char *filename, char **argvec);
+int Exec(char *, char **);
 
-void Exit(int status);
+void Exit(int);
 
-int Wait(int *status_ptr);
+int Wait(int *);
 
 int GetPid(void);
 
-int Brk(void *addr);
+int Brk(void *);
 
-int Delay (int clock_ticks);
+int Delay (int);
 
-int TtyRead(int tty_id, void *buf, int len);
+int TtyRead(int, void *, int);
 
-int TtyWrite(int tty_id, void *buf, int len);
+int TtyWrite(int, void *, int);

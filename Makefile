@@ -33,8 +33,8 @@ ALL = yalnix
 #	make up your kernel, and KERNEL_SRCS should  be a list of
 #	the corresponding source files that make up your kernel.
 #
-KERNEL_OBJS = source/call.o source/kernel.o source/trap.o yalnix.o
-KERNEL_SRCS = source/call.c source/kernel.c source/trap.c yalnix.c
+KERNEL_OBJS = source/call.o source/kernel.o source/trap.o source/init.o yalnix.o
+KERNEL_SRCS = source/call.c source/kernel.c source/trap.c source/init.c yalnix.c
 
 #
 #	You should not have to modify anything else in this Makefile

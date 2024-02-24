@@ -4,16 +4,16 @@
 
 typedef void (*TrapHandlerPtr)(ExceptionInfo *);
 
-void TrapKernelHandler(ExceptionInfo *info);
+void TrapKernelHandler(ExceptionInfo *);
 
-void TrapClockHandler(ExceptionInfo *info);
+void TrapClockHandler(ExceptionInfo *);
 
-void TrapIllegalHandler(ExceptionInfo *info);
+void TrapIllegalHandler(ExceptionInfo *);
 
-void TrapMemoryHandler(ExceptionInfo *info);
+void TrapMemoryHandler(ExceptionInfo *);
 
-void TrapMathHandler(ExceptionInfo *info);
+void TrapMathHandler(ExceptionInfo *);
 
-void TrapTtyReceiveHandler(ExceptionInfo *info);
+void TrapTtyReceiveHandler(ExceptionInfo *);
 
-void TrapTtyTransmitHandler(ExceptionInfo *info);
+void TrapTtyTransmitHandler(ExceptionInfo *);

@@ -1,12 +1,14 @@
-#include <trap.h>
-#include <call.h>
-#include <kernel.h>
+#include "trap.h"
+#include "call.h"
+#include "init.h"
 
 #include <stdio.h>
 
+int totalPhysicalFrameNum;
+
 TrapHandlerPtr interruptVectorTable[TRAP_VECTOR_SIZE];
 
-PhysicalPage physicalPages;
+PhysicalFrame physicalPages;
 
 PageTable *region0, region1[PAGE_TABLE_LEN];
 
@@ -37,28 +39,30 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size,
 	void *orig_brk, char **cmd_args) {
 	
 	void *newBrk;
-	TracePrintf(LOG, "Kernel Start, Total physical memory %d, current bread %p\n", pmem_size, orig_brk);
-	
-	// Initialize the interrupt vector table and REG_VECTOR_BASE privileged machine register
-	initInterruptVectorTable(interruptVectorTable);
+
+	totalPhysicalFrameNum = DOWN_TO_PAGE(pmem_size) >> PAGESHIFT;
+
+	TracePrintf(LOG, "Kernel Start, Total Physical Memory %d Btyes/%d Pages\n", pmem_size, totalPhysicalFrameNum);
 
 	SetKernelBrk(orig_brk);
 
+	// Initialize the interrupt vector table and REG_VECTOR_BASE privileged machine register
+	initInterruptVectorTable(interruptVectorTable);
+
 	// Initialize the free physical page frames
-	newBrk = initFreePhysicalPage(&physicalPages, pmem_size, kernelBreak);
+	newBrk = initFreePhysicalFrame(&physicalPages, totalPhysicalFrameNum, kernelBreak);
 	SetKernelBrk(newBrk);
 
 	// Initialize the page table
-	newBrk = initPageTable(region0, region1, kernelBreak);
+	newBrk = initPageTable(region0, region1, &physicalPages, kernelBreak);
 	SetKernelBrk(newBrk);
 
 	// Enable virtual memory
 	WriteRegister(REG_VM_ENABLE, 1);
 	
-
 	vmEnable = 1;
 
-	TracePrintf(LOG, "Enable vitrual memory, current kernel break %p\n", kernelBreak);
+	TracePrintf(LOG, "Enable vitrual memory\n");
 
 	Halt();
 }
@@ -69,6 +73,8 @@ int SetKernelBrk(void *addr) {
 		if ((unsigned long)addr > VMEM_1_LIMIT) return -1;
 
 		kernelBreak = addr;
+
+		TracePrintf(TRC, "New kernel break %p, page num %d\n", kernelBreak, DOWN_TO_PAGE(kernelBreak) >> PAGESHIFT);
 
 		return 0;
 	} else {
