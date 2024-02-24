@@ -37,62 +37,55 @@ void *initFreePhysicalFrame(PhysicalFrame *PhysicalFrames, int totalPhysicalFram
     int kernelStackBasePgNum = DOWN_TO_PAGE(KERNEL_STACK_BASE) >> PAGESHIFT;
 
     void* newBrk = brk + allocatedMemory;
-    int newBrkPgNum = DOWN_TO_PAGE(newBrk) >> PAGESHIFT;
+    int newBrkPgNum = UP_TO_PAGE(newBrk) >> PAGESHIFT;
 
     PhysicalFrames->freePageNum = 0;
     
-    int pfn = 0;
+    int pfn;
     for (pfn = 0; pfn < totalPhysicalFrameNum; pfn++) {
         // The page for kernel stack and kernel heap are not free (According to Fig 4, not very sure about this part.)
-        if (pfn >= kernelStackBasePgNum && pfn <= newBrkPgNum) PhysicalFrames->isFree[pfn] = 0;
+        // The page (at VMEM_1_LIMIT - PAGESIZE) for region0 page table is not free
+        if ((pfn >= kernelStackBasePgNum && pfn < newBrkPgNum) || pfn == PAGE_TABLE_LEN * 2 - 1) PhysicalFrames->isFree[pfn] = 0;
         else {
             PhysicalFrames->freePageNum++;
             PhysicalFrames->isFree[pfn] = 1;
         }
     }
 
-    TracePrintf(TRC, "free Physical Page (Total - kernel) %d\n", PhysicalFrames->freePageNum);
+    TracePrintf(TRC, "free Physical Page (Total - kernel - region0 table) %d\n", PhysicalFrames->freePageNum);
 
     return newBrk;
 }
 
-void *initPageTable(PageTable *region0, PageTable *region1, PhysicalFrame *PhysicalFrames,void *brk) {
+void initPageTable(PageTable *region0, PageTable *region1, void *brk) {
     TracePrintf(LOG, "start init Page Table\n");
 
     // Piazza @84
     // For your initial Region 0 page table, it is best to take some physical page 
     // and put that page table in the first half of that physical page. You then know 
     // it's physical address for writing into REG_PTR0.  And you can set up a PTE for 
-    // it so that it appears to be at any virtual address you want. 
+    // it so that it appears to be at any virtual address you want. An easy place to 
+    // make it appear (not the only choice) is at the top virtual page address in Region 1 
+    // (at virtual address VMEM_1_LIMIT - PAGESIZE) by using the top PTE in the Region 1 
+    // page table you are setting up.
 
-    region0 = (PageTable *)brk;
+    region0 = (PageTable *)(VMEM_1_LIMIT - PAGESIZE);;
 
-    int brk_pg_num = DOWN_TO_PAGE(brk) >> PAGESHIFT;
-    void* new_brk = brk + PAGE_TABLE_SIZE;
+    // set the corresponding Physical page to invalid
+    int region0FramePg = DOWN_TO_PAGE(VMEM_1_LIMIT - PAGESIZE) >> PAGESHIFT;
 
+    setPTE(&region1[PAGE_TABLE_LEN - 1], 2*PAGE_TABLE_LEN - 1, 1, PROT_NONE, (PROT_READ | PROT_WRITE));
     // Becareful about the DOWN_TO_PAGE and UP_TO_PAGE usage
-    int new_brk_pg_num = DOWN_TO_PAGE(new_brk) >> PAGESHIFT;
     
     int i = 0;
     // a page table entry should be built so that the new vpn = pfn
-
-    TracePrintf(TRC, "brk_pg_num %d, new_brk_pg_num %d\n", brk_pg_num + 1, new_brk_pg_num);
-
-    // set the corresponding Physical page to invalid
-    for (i = brk_pg_num + 1; i <= new_brk_pg_num; i++) {
-        if (PhysicalFrames->isFree[i]) PhysicalFrames->freePageNum--;
-
-        PhysicalFrames->isFree[i] = 0;
-    }
-
-    TracePrintf(TRC, "free Physical Page (Total - kernel - region0 table) %d\n", PhysicalFrames->freePageNum);
 
     // Kernel stack
     for (i = 0; i < KERNEL_STACK_PAGES; i++) {
         setPTE(&region0[PAGE_TABLE_LEN - 1 - i], PAGE_TABLE_LEN - 1 - i, 1, PROT_NONE, (PROT_READ | PROT_WRITE));
     }
 
-    for (i = 0; i <= brk_pg_num; i++) {
+    for (i = 0; i < UP_TO_PAGE(brk - VMEM_1_BASE) >> PAGESHIFT; i++) {
         // Kernel data/bss/heap
         setPTE(&region1[i], i + PAGE_TABLE_LEN, 1, PROT_NONE, (PROT_READ | PROT_WRITE));
         
@@ -103,6 +96,4 @@ void *initPageTable(PageTable *region0, PageTable *region1, PhysicalFrame *Physi
     //Setup REG_PTR0 and REG_PTR1
 	WriteRegister(REG_PTR0, (RCS421RegVal) region0);
 	WriteRegister(REG_PTR1, (RCS421RegVal) region1);
-
-    return new_brk;
 }

@@ -54,8 +54,7 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size,
 	SetKernelBrk(newBrk);
 
 	// Initialize the page table
-	newBrk = initPageTable(region0, region1, &physicalPages, kernelBreak);
-	SetKernelBrk(newBrk);
+	initPageTable(region0, region1, kernelBreak);
 
 	// Enable virtual memory
 	WriteRegister(REG_VM_ENABLE, 1);

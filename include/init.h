@@ -3,8 +3,8 @@
 #include "kernel.h"
 #include "trap.h"
 
-void initInterruptVectorTable(TrapHandlerPtr *InterruptVectorTable);
+void initInterruptVectorTable(TrapHandlerPtr *);
 
-void *initFreePhysicalFrame(PhysicalFrame *PhysicalFrames, int totalPhysicalFrameNum, void *orig_brk);
+void *initFreePhysicalFrame(PhysicalFrame *, int, void *);
 
-void *initPageTable(PageTable *region0, PageTable *region1, PhysicalFrame *PhysicalFrames, void *orig_brk);
+void initPageTable(PageTable *, PageTable *, void *);
