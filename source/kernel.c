@@ -27,36 +27,38 @@ void initInterruptVectorTable(TrapHandlerPtr *InterruptVectorTable) {
 }
 
 // Build a structure to keep track of what page frames in physical memory are free
-void initFreePhysicalPage(PhysicalPage *PhysicalPages, unsigned int pmem_size, void *orig_brk) {
+void *initFreePhysicalPage(PhysicalPage *PhysicalPages, unsigned int pmem_size, void *brk) {
     TracePrintf(LOG, "start init Free Physical Page\n");
 
     int totalPageNum = DOWN_TO_PAGE(pmem_size) >> PAGESHIFT;
 
-    TracePrintf(TRC, "Original break %p\n", orig_brk);
+    TracePrintf(TRC, "break %p\n", brk);
 
     // Allocate hysical space for the isFree array
-    PhysicalPages->isFree = (int *)orig_brk;
-    orig_brk += totalPageNum * sizeof(int);
+    PhysicalPages->isFree = (int *)brk;
+    int allocatedMemory = totalPageNum * sizeof(int);
 
-    TracePrintf(TRC, "Original break After allocate phisical Pages %p\n", orig_brk);
+    TracePrintf(TRC, "break After allocate phisical Pages %p\n", brk + allocatedMemory);
 
     PhysicalPages->freePageNum = 0;
 
     int pfn = 0;
     for (pfn = 0; pfn < totalPageNum; pfn++) {
         // The page for kernel stack and kernel heap are not free (According to Fig 4, not very sure about this part.)
-        if (pfn >= DOWN_TO_PAGE(KERNEL_STACK_BASE) && pfn < UP_TO_PAGE(orig_brk)) PhysicalPages->isFree[pfn] = 0;
+        if (pfn >= DOWN_TO_PAGE(KERNEL_STACK_BASE) && pfn < UP_TO_PAGE(brk)) PhysicalPages->isFree[pfn] = 0;
         else {
             PhysicalPages->freePageNum++;
             PhysicalPages->isFree[pfn] = 1;
         }
     }
+
+    return brk + allocatedMemory;
 }
 
-void initPageTable(PageTable *region0, PageTable *region1, void *orig_brk) {
+void *initPageTable(PageTable *region0, PageTable *region1, void *brk) {
     TracePrintf(LOG, "start init Page Table\n");
 
-    TracePrintf(TRC, "Original break %p\n", orig_brk);
+    TracePrintf(TRC, "break %p\n", brk);
 
     // Piazza @84
     // For your initial Region 0 page table, it is best to take some physical page 
@@ -64,12 +66,11 @@ void initPageTable(PageTable *region0, PageTable *region1, void *orig_brk) {
     // it's physical address for writing into REG_PTR0.  And you can set up a PTE for 
     // it so that it appears to be at any virtual address you want. 
 
-    region0 = (PageTable *)orig_brk;
-    orig_brk += PAGE_TABLE_SIZE;
+    region0 = (PageTable *)brk;
 
-    TracePrintf(TRC, "Original break After allocate Region 0 Page Table %p\n", orig_brk);
+    TracePrintf(TRC, "break After allocate Region 0 Page Table %p\n", brk + PAGE_TABLE_SIZE);
 
-    int orig_brk_pg_num = UP_TO_PAGE(orig_brk) >> PAGESHIFT;
+    int brk_pg_num = UP_TO_PAGE(brk) >> PAGESHIFT;
 
     int i = 0;
     // a page table entry should be built so that the new vpn = pfn
@@ -79,7 +80,7 @@ void initPageTable(PageTable *region0, PageTable *region1, void *orig_brk) {
         setPTE(&region0[PAGE_TABLE_LEN - 1 - i], PAGE_TABLE_LEN - 1 - i, 1, PROT_NONE, (PROT_READ | PROT_WRITE));
     }
 
-    for (i = 0; i < orig_brk_pg_num; i++) {
+    for (i = 0; i < brk_pg_num; i++) {
         // Kernel data/bss/heap
         setPTE(&region1[i], i + PAGE_TABLE_LEN, 1, PROT_NONE, (PROT_READ | PROT_WRITE));
         
@@ -90,4 +91,6 @@ void initPageTable(PageTable *region0, PageTable *region1, void *orig_brk) {
     //Setup REG_PTR0 and REG_PTR1
 	WriteRegister(REG_PTR0, (RCS421RegVal) region0);
 	WriteRegister(REG_PTR1, (RCS421RegVal) region1);
+
+    return brk + PAGE_TABLE_SIZE;
 }

@@ -21,6 +21,6 @@ void *myMalloc(size_t size);
 
 void initInterruptVectorTable(TrapHandlerPtr *InterruptVectorTable);
 
-void initFreePhysicalPage(PhysicalPage *PhysicalPages, unsigned int pmem_size, void *orig_brk);
+void *initFreePhysicalPage(PhysicalPage *PhysicalPages, unsigned int pmem_size, void *orig_brk);
 
-void initPageTable(PageTable *region0, PageTable *region1, void *orig_brk);
+void *initPageTable(PageTable *region0, PageTable *region1, void *orig_brk);

@@ -9,6 +9,10 @@ TrapHandlerPtr interruptVectorTable[TRAP_VECTOR_SIZE];
 PhysicalPage physicalPages;
 
 PageTable *region0, region1[PAGE_TABLE_LEN];
+
+int vmEnable = 0;
+
+void *kernelBreak;
 // 3.3 Kernel Boot Entry Point
 
 // Kernel Start procedure should initialize the operating system kernel and then return,
@@ -31,28 +35,47 @@ PageTable *region0, region1[PAGE_TABLE_LEN];
 
 void KernelStart(ExceptionInfo *info, unsigned int pmem_size, 
 	void *orig_brk, char **cmd_args) {
-		
-	TracePrintf(5, "Kernel Start, Total physical memory %d\n", pmem_size);
+	
+	void *newBrk;
+	TracePrintf(LOG, "Kernel Start, Total physical memory %d, current bread %p\n", pmem_size, orig_brk);
 	
 	// Initialize the interrupt vector table and REG_VECTOR_BASE privileged machine register
 	initInterruptVectorTable(interruptVectorTable);
 
+	SetKernelBrk(orig_brk);
+
 	// Initialize the free physical page frames
-	initFreePhysicalPage(&physicalPages, pmem_size, orig_brk);
+	newBrk = initFreePhysicalPage(&physicalPages, pmem_size, kernelBreak);
+	SetKernelBrk(newBrk);
 
 	// Initialize the page table
-	initPageTable(region0, region1, orig_brk);
+	newBrk = initPageTable(region0, region1, kernelBreak);
+	SetKernelBrk(newBrk);
 
 	// Enable virtual memory
 	WriteRegister(REG_VM_ENABLE, 1);
+	
 
-	TracePrintf(5, "Enable vitrual memory\n");
+	vmEnable = 1;
+
+	TracePrintf(LOG, "Enable vitrual memory, current kernel break %p\n", kernelBreak);
 
 	Halt();
 }
 
 // 3.4.2 Kernel Memory Management
 int SetKernelBrk(void *addr) {
+	if (!vmEnable) {
+		if ((unsigned long)addr > VMEM_1_LIMIT) return -1;
+
+		kernelBreak = addr;
+
+		return 0;
+	} else {
+		
+	}
+
+	return -1;
 }
 
 // 3.5 ContextSwitching
