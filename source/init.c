@@ -36,8 +36,8 @@ void *initFreePhysicalFrame(PhysicalFrame *PhysicalFrames, int totalPhysicalFram
 
     int kernelStackBasePgNum = DOWN_TO_PAGE(KERNEL_STACK_BASE) >> PAGESHIFT;
 
-    void* newBrk = brk + allocatedMemory;
-    int newBrkPgNum = UP_TO_PAGE(newBrk) >> PAGESHIFT;
+    void *newBrk = UP_TO_PAGE(brk + allocatedMemory);
+    int newBrkPgNum = (int)newBrk >> PAGESHIFT;
 
     PhysicalFrames->freePageNum = 0;
     
