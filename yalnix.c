@@ -8,7 +8,7 @@ TrapHandlerPtr interruptVectorTable[TRAP_VECTOR_SIZE];
 
 PhysicalPage physicalPages;
 
-PageTable pageTable;
+PageTable *region0, region1[PAGE_TABLE_LEN];
 // 3.3 Kernel Boot Entry Point
 
 // Kernel Start procedure should initialize the operating system kernel and then return,
@@ -38,11 +38,12 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size,
 	initInterruptVectorTable(interruptVectorTable);
 
 	// Initialize the free physical page frames
-	// initFreePhysicalPage(&physicalPages, pmem_size, orig_brk);
+	initFreePhysicalPage(&physicalPages, pmem_size, orig_brk);
 
 	// Initialize the page table
-	initPageTable(&pageTable, orig_brk);
+	initPageTable(region0, region1, orig_brk);
 
+	// Enable virtual memory
 	WriteRegister(REG_VM_ENABLE, 1);
 
 	TracePrintf(5, "Enable vitrual memory\n");
