@@ -7,11 +7,19 @@
 #define TRC 4
 
 typedef struct pcb {
+    int pid;
 } PCB;
 
-typedef struct pte PageTable;
+typedef struct pte PTE;
 
 typedef struct physicalFrame {
-    int freePageNum;
+    int totalPFN;
+    int freePFN;
     int *isFree;
 } PhysicalFrame;
+
+void freePhysicalFrame(PhysicalFrame *physicalFrame, int pfn);
+
+int getFreePhysicalFrame(PhysicalFrame *physicalFrame);
+
+void setPTE(struct pte *entry, int pfn, int valid, int uprot, int kprot);

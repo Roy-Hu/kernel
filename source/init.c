@@ -3,7 +3,6 @@
 
 #include "init.h"
 #include "call.h"
-#include "helper.h"
 
 // Initialize the interrupt vector table entries for each type of interrupt, exception, or trap, by making
 // them point to the correct handler functions in your kernel.
@@ -32,14 +31,15 @@ void *initFreePhysicalFrame(PhysicalFrame *PhysicalFrames, int totalPhysicalFram
 
     // Allocate hysical space for the isFree array
     PhysicalFrames->isFree = (int *)brk;
+    PhysicalFrames->totalPFN = totalPhysicalFrameNum;
     int allocatedMemory = totalPhysicalFrameNum * sizeof(int);
 
     int kernelStackBasePgNum = DOWN_TO_PAGE(KERNEL_STACK_BASE) >> PAGESHIFT;
 
-    void *newBrk = UP_TO_PAGE(brk + allocatedMemory);
-    int newBrkPgNum = (int)newBrk >> PAGESHIFT;
+    long newBrk = UP_TO_PAGE(brk + allocatedMemory);
+    int newBrkPgNum = newBrk >> PAGESHIFT;
 
-    PhysicalFrames->freePageNum = 0;
+    PhysicalFrames->freePFN = 0;
     
     int pfn;
     for (pfn = 0; pfn < totalPhysicalFrameNum; pfn++) {
@@ -47,17 +47,17 @@ void *initFreePhysicalFrame(PhysicalFrame *PhysicalFrames, int totalPhysicalFram
         // The page (at VMEM_1_LIMIT - PAGESIZE) for region0 page table is not free
         if ((pfn >= kernelStackBasePgNum && pfn < newBrkPgNum) || pfn == PAGE_TABLE_LEN * 2 - 1) PhysicalFrames->isFree[pfn] = 0;
         else {
-            PhysicalFrames->freePageNum++;
+            PhysicalFrames->freePFN++;
             PhysicalFrames->isFree[pfn] = 1;
         }
     }
 
-    TracePrintf(TRC, "free Physical Page (Total - kernel - region0 table) %d\n", PhysicalFrames->freePageNum);
+    TracePrintf(TRC, "free Physical Page (Total - kernel - region0 table) %d\n", PhysicalFrames->freePFN);
 
-    return newBrk;
+    return (void *)newBrk;
 }
 
-void initPageTable(PageTable *region0, PageTable *region1, void *brk) {
+PTE *initPageTable(PTE *ptr1, void *brk) {
     TracePrintf(LOG, "start init Page Table\n");
 
     // Piazza @84
@@ -69,31 +69,33 @@ void initPageTable(PageTable *region0, PageTable *region1, void *brk) {
     // (at virtual address VMEM_1_LIMIT - PAGESIZE) by using the top PTE in the Region 1 
     // page table you are setting up.
 
-    region0 = (PageTable *)(VMEM_1_LIMIT - PAGESIZE);;
+    PTE *ptr0 = (PTE *)(VMEM_1_LIMIT - PAGESIZE);
 
-    // set the corresponding Physical page to invalid
-    int region0FramePg = DOWN_TO_PAGE(VMEM_1_LIMIT - PAGESIZE) >> PAGESHIFT;
-
-    setPTE(&region1[PAGE_TABLE_LEN - 1], 2*PAGE_TABLE_LEN - 1, 1, PROT_NONE, (PROT_READ | PROT_WRITE));
+    setPTE(&ptr1[PAGE_TABLE_LEN - 1], 2 * PAGE_TABLE_LEN - 1, 1, PROT_NONE, (PROT_READ | PROT_WRITE));
     // Becareful about the DOWN_TO_PAGE and UP_TO_PAGE usage
     
     int i = 0;
     // a page table entry should be built so that the new vpn = pfn
 
+    // initialize region0 page table
+    for (i = 0; i < PAGE_TABLE_LEN; i++) setPTE(&ptr0[i], -1, 0, PROT_NONE, PROT_NONE);
+
     // Kernel stack
     for (i = 0; i < KERNEL_STACK_PAGES; i++) {
-        setPTE(&region0[PAGE_TABLE_LEN - 1 - i], PAGE_TABLE_LEN - 1 - i, 1, PROT_NONE, (PROT_READ | PROT_WRITE));
+        setPTE(&ptr0[PAGE_TABLE_LEN - 1 - i], PAGE_TABLE_LEN - 1 - i, 1, PROT_NONE, (PROT_READ | PROT_WRITE));
     }
 
     for (i = 0; i < UP_TO_PAGE(brk - VMEM_1_BASE) >> PAGESHIFT; i++) {
         // Kernel data/bss/heap
-        setPTE(&region1[i], i + PAGE_TABLE_LEN, 1, PROT_NONE, (PROT_READ | PROT_WRITE));
+        setPTE(&ptr1[i], i + PAGE_TABLE_LEN, 1, PROT_NONE, (PROT_READ | PROT_WRITE));
         
         // Kernel text
-        if (i * PAGESIZE + VMEM_1_BASE < &_etext) region1[i].kprot = (PROT_READ | PROT_EXEC);
+        if (i * PAGESIZE + VMEM_1_BASE < &_etext) ptr1[i].kprot = (PROT_READ | PROT_EXEC);
     }
 
     //Setup REG_PTR0 and REG_PTR1
-	WriteRegister(REG_PTR0, (RCS421RegVal) region0);
-	WriteRegister(REG_PTR1, (RCS421RegVal) region1);
+	WriteRegister(REG_PTR0, (RCS421RegVal) ptr0);
+	WriteRegister(REG_PTR1, (RCS421RegVal) ptr1);
+
+    return ptr0;
 }

@@ -7,4 +7,4 @@ void initInterruptVectorTable(TrapHandlerPtr *);
 
 void *initFreePhysicalFrame(PhysicalFrame *, int, void *);
 
-void initPageTable(PageTable *, PageTable *, void *);
+PTE *initPageTable(PTE *, void *);
