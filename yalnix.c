@@ -61,7 +61,6 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size,
 
 	// Initialize the page table
 	ptr0 = initPageTable(ptr1, kernelBreak);
-    int i;
     
     TracePrintf(TRC, "ptr0 %p, ptr1 %p\n", ptr0, ptr1);
 
@@ -88,7 +87,7 @@ int SetKernelBrk(void *addr) {
 
 		return 0;
 	} else {
-		
+		TracePrintf(TRC, "New kernel break Vitrual Memory Enable\n");
 	}
 
 	return -1;
@@ -185,7 +184,7 @@ int LoadProgram(char *name, char **args, ExceptionInfo *info) {
         strcpy(cp, args[i]);
         cp += strlen(cp) + 1;
     }
-  
+
     /*
      *  The arguments will get copied starting at "cp" as set below,
      *  and the argv pointers to the arguments (and the argc value)
@@ -262,6 +261,7 @@ int LoadProgram(char *name, char **args, ExceptionInfo *info) {
     // >>>> memory page indicated by that PTE's pfn field.  Set all
     // >>>> of these PTEs to be no longer valid.
 
+    TracePrintf(TRC, "LoadProgram: free old KERNEL_STACK_PAGES 0 ~ %d\n", PAGE_TABLE_LEN - KERNEL_STACK_PAGES);
     for (i = 0; i < PAGE_TABLE_LEN - KERNEL_STACK_PAGES; i++) {
         if (ptr0[i].valid == 1) {
             freePhysicalFrame(&physicalFrames, ptr0[i].pfn);
@@ -291,6 +291,7 @@ int LoadProgram(char *name, char **args, ExceptionInfo *info) {
     // >>>>     pfn   = a new page of physical memory
     int pfn;
 
+    TracePrintf(TRC, "LoadProgram: set text pages %d ~ %d\n", MEM_INVALID_PAGES, MEM_INVALID_PAGES + text_npg);
     for (i = MEM_INVALID_PAGES; i < MEM_INVALID_PAGES + text_npg; i++) {
         pfn = getFreePhysicalFrame(&physicalFrames);
         if (pfn == -1) {
@@ -311,6 +312,7 @@ int LoadProgram(char *name, char **args, ExceptionInfo *info) {
     // >>>>     uprot = PROT_READ | PROT_WRITE
     // >>>>     pfn   = a new page of physical memory
 
+    TracePrintf(TRC, "LoadProgram: set data and bss pages %d ~ %d\n", MEM_INVALID_PAGES + text_npg, MEM_INVALID_PAGES + text_npg + data_bss_npg);
     for (i = MEM_INVALID_PAGES + text_npg; i < MEM_INVALID_PAGES + text_npg + data_bss_npg; i++) {
         pfn = getFreePhysicalFrame(&physicalFrames);
         if (pfn == -1) {
@@ -333,7 +335,8 @@ int LoadProgram(char *name, char **args, ExceptionInfo *info) {
     // >>>>     uprot = PROT_READ | PROT_WRITE
     // >>>>     pfn   = a new page of physical memory
 
-    for (i = USER_STACK_LIMIT >> PAGESHIFT - stack_npg; i < USER_STACK_LIMIT >> PAGESHIFT; i++) {
+    TracePrintf(TRC, "LoadProgram: set user stack pages %d ~ %d\n", (USER_STACK_LIMIT >> PAGESHIFT) - stack_npg, USER_STACK_LIMIT >> PAGESHIFT);
+    for (i = (USER_STACK_LIMIT >> PAGESHIFT) - stack_npg; i < (USER_STACK_LIMIT >> PAGESHIFT); i++) {
         pfn = getFreePhysicalFrame(&physicalFrames);
         if (pfn == -1) {
             TracePrintf(ERR, "No free physical frame\n");
@@ -379,6 +382,8 @@ int LoadProgram(char *name, char **args, ExceptionInfo *info) {
      */
     // >>>> For text_npg number of PTEs corresponding to the user text
     // >>>> pages, set each PTE's kprot to PROT_READ | PROT_EXEC.
+
+    TracePrintf(TRC, "LoadProgram: set program text pages %d ~ %d\n", MEM_INVALID_PAGES, MEM_INVALID_PAGES + text_npg);
     for (i = MEM_INVALID_PAGES; i < MEM_INVALID_PAGES + text_npg; i++) {
         ptr0[i].kprot = PROT_READ | PROT_EXEC;
     }
