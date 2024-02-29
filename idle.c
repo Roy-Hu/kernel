@@ -1,7 +1,7 @@
-#include <stdio.h>
 #include <comp421/hardware.h>
+#include <kernel.h>
 
 int main(int argc, char *argv[]) {
-	printf("Start idle process\n");
+    TracePrintf(LOG, "Run Idle Process\n");
 	while(1) Pause();
 }

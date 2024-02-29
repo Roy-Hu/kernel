@@ -9,3 +9,5 @@ TTYLOG*
 TRACE
 DISK
 ignore
+idle
+init

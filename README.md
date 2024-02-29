@@ -19,14 +19,14 @@
  - <del>Build the initial page tables for Region 0 and Region 1, and initialize the registers REG_PTR0 and
  REG_PTR1to define these initial page tables.<del>
  - <del>Enable virtual memory.<del>
- - Create an “idle” process to be run by your kernel when there are no other runnable (ready) processes
+ - <del>Create an “idle” process to be run by your kernel when there are no other runnable (ready) processes
  in the system. The idle process should be a loop that executes the Pause machine instruction on each
  loop iteration. The idle process can be loaded from a file using LoadProgram, in the same way as
  a normal user process. Or, if you think about it, it is possible to have the code for the idle process
  “built into” the rest of the code for your kernel, for example by placing the idle process’s code in a
  separate C procedure, so that the machine language code for the idle process then automatically gets
  loaded into memory along with the rest of your kernel; you wouldn’t actually call this procedure, but
- rather you can initialize the pc value for the idle process to the address of this code for idle.
+ rather you can initialize the pc value for the idle process to the address of this code for idle.<del>
  - Create the first “regular” process, known as the init process, and load the initial program into it. In
  this step, guide yourself by the file load.template that we provide, which shows a skeleton of
  the procedure necessary to load an executable program from a Linux file into memory as a Yalnix

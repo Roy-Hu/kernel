@@ -73,7 +73,7 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size,
 
     LoadProgram("idle", cmd_args, info);
     
-	Halt();
+    TracePrintf(LOG, "KernelStart Success\n");
 }
 
 // 3.4.2 Kernel Memory Management
@@ -406,7 +406,6 @@ int LoadProgram(char *name, char **args, ExceptionInfo *info) {
     /*
      *  Now, finally, build the argument list on the new stack.
      */
-    TracePrintf(LOG, "cpp %p\n", cpp);
 
     *cpp++ = (char *)argcount;		/* the first value at cpp is argc */
     cp2 = argbuf;
