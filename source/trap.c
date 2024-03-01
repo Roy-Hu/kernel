@@ -1,10 +1,47 @@
 #include "trap.h"
 #include "global.h"
 
+#include <comp421/yalnix.h>
+
 void TrapKernelHandler(ExceptionInfo *info) {
     TracePrintf(LOG, "TrapKernelHandler\n");
 
-    Halt();
+    switch (info->code)
+    {
+    case YALNIX_FORK:
+        /* code */
+        break;
+    case YALNIX_EXEC:
+        /* code */
+        break;
+    case YALNIX_EXIT:
+        /* code */
+        break;
+    case YALNIX_WAIT:
+        /* code */
+        break;
+    case YALNIX_GETPID: 
+        info->regs[0] = GetPid();
+        TracePrintf(LOG, "GetPid %d\n", currentPCB->pid);
+
+        break;
+    case YALNIX_BRK:
+        /* code */
+        break;
+    case YALNIX_DELAY:  
+        /* code */
+        break;
+    case YALNIX_TTY_READ:
+        /* code */
+        break;
+    case YALNIX_TTY_WRITE:  
+        /* code */
+        break;
+
+    
+    default:
+        break;
+    }
 }
 
 void TrapClockHandler(ExceptionInfo *info) {

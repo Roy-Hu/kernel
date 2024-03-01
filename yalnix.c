@@ -1,5 +1,4 @@
 #include "trap.h"
-#include "call.h"
 #include "init.h"
 #include "pagetable.h"
 
@@ -75,6 +74,7 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size,
     PCB *idlePCB = createPCB(0);
     PCB *initPCB = createPCB(1);
 
+    currentPCB = initPCB;
     LoadProgram("idle", cmd_args, info);
     
     int status = LoadProgram(cmd_args[0], cmd_args, info);

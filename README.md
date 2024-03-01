@@ -27,7 +27,7 @@
  separate C procedure, so that the machine language code for the idle process then automatically gets
  loaded into memory along with the rest of your kernel; you wouldn’t actually call this procedure, but
  rather you can initialize the pc value for the idle process to the address of this code for idle.<del>
- - Create the first “regular” process, known as the init process, and load the initial program into it. In
+ - <del>Create the first “regular” process, known as the init process, and load the initial program into it. In
  this step, guide yourself by the file load.template that we provide, which shows a skeleton of
  the procedure necessary to load an executable program from a Linux file into memory as a Yalnix
  process. This initial process will serve a role similar to that of the “init” process in Unix/Linux as
@@ -36,9 +36,9 @@
  Rather, as noted in Section 3.1, that process continues to run but simply has no parent process. To
  run your initial program you should put the file name of the init program on your shell command line
  when you run your kernel. This program name will then be passed to your KernelStartas one of
- the cmd_argsstrings.
- - Return from your KernelStart routine. The machine will begin running the program defined by
+ the cmd_argsstrings.<del>
+ - <del>Return from your KernelStart routine. The machine will begin running the program defined by
  the current page tables and by the values returned in the ExceptionInfo structure (values which
  you have presumably modified to point to the program counter and stack pointer, etc., of the initial
- process)
+ process)<del>
 ## Issue:

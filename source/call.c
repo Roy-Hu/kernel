@@ -1,4 +1,5 @@
-#include "call.h"
+#include <comp421/yalnix.h>
+#include "global.h"
 
 int Fork(void) {
     return 0;
@@ -16,7 +17,7 @@ int Wait(int *status_ptr) {
 }
 
 int GetPid(void) {
-    return 0;
+    return currentPCB->pid;
 }
 
 int Brk(void *addr) {
