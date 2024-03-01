@@ -31,12 +31,21 @@
 // your Linux terminal) to start the machine and thus the kernel. The cmd_args vector is terminated
 // by a NULLpointer.
 
+PCB *createPCB(int pid) {
+    TracePrintf(LOG, "Create New PCB %d\n", pid);
+
+    PCB *pcb = (PCB *)malloc(sizeof(PCB));
+
+    pcb->pid = 0;
+    pcb->next = NULL;
+
+    return pcb;
+}
+
 void KernelStart(ExceptionInfo *info, unsigned int pmem_size, 
 	void *orig_brk, char **cmd_args) {
 	
 	void *newBrk;
-
-    vmEnable = 0;
 
 	totalPhysicalFrameNum = DOWN_TO_PAGE(pmem_size) >> PAGESHIFT;
 
@@ -63,7 +72,14 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size,
 
 	TracePrintf(LOG, "Enable vitrual memory\n");
 
+    PCB *idlePCB = createPCB(0);
+    PCB *initPCB = createPCB(1);
+
     LoadProgram("idle", cmd_args, info);
+    
+    int status = LoadProgram(cmd_args[0], cmd_args, info);
+
+    if (status == -2) TracePrintf(ERR, "LoadProgram Error\n");
     
     TracePrintf(LOG, "KernelStart Success\n");
 }
@@ -75,14 +91,45 @@ int SetKernelBrk(void *addr) {
 
 		kernelBreak = addr;
 
-		TracePrintf(TRC, "New kernel break %p, page num %d\n", kernelBreak, DOWN_TO_PAGE(kernelBreak) >> PAGESHIFT);
-
-		return 0;
+		TracePrintf(INF, "New kernel break %p, page num %d\n", kernelBreak, DOWN_TO_PAGE(kernelBreak) >> PAGESHIFT);
 	} else {
-		TracePrintf(TRC, "New kernel break Vitrual Memory Enable\n");
+		TracePrintf(INF, "New kernel break (Vitrual Memory Enable)\n");
+        int kernelBreakVpn = DOWN_TO_PAGE(kernelBreak - VMEM_1_BASE) >> PAGESHIFT;
+
+        if (kernelBreak < VMEM_1_BASE || kernelBreak > VMEM_1_LIMIT) {
+            TracePrintf(ERR, "kernel break %p(VPN %d) out of range\n", kernelBreak, kernelBreakVpn);
+            return -1;
+        }
+
+        int vpn = UP_TO_PAGE(addr - VMEM_1_BASE) >> PAGESHIFT;
+
+        TracePrintf(TRC, "New kernel break's VPN %d\n", vpn);
+        // Last Page in page table 1 is reserved for page table 0
+        if (vpn + 1 > PAGE_TABLE_LEN) {
+            TracePrintf(ERR, "New kernel break's VPN %d out of range\n", vpn);
+            return -1;
+        } else if (vpn < kernelBreakVpn) {
+            TracePrintf(ERR, "New kernel break's VPN %d less than current VPN %d\n", vpn, kernelBreakVpn);
+            return -1;
+        }
+
+        int pageNum = vpn - kernelBreakVpn;
+        int i, pfn;
+
+        for (i = 0; i < pageNum; i++) {
+            pfn = getFreePhysicalFrame(&physicalFrames);
+            if (pfn == -1) {
+                TracePrintf(ERR, "No free physical frame\n");
+                return -1;
+            }
+
+            setPTE(&ptr0[kernelBreakVpn + i], pfn, 1, PROT_READ | PROT_WRITE, PROT_READ | PROT_WRITE);
+        }
+
+        kernelBreak = addr;
 	}
 
-	return -1;
+	return 0;
 }
 
 // 3.5 ContextSwitching
@@ -402,7 +449,6 @@ int LoadProgram(char *name, char **args, ExceptionInfo *info) {
     *cpp++ = (char *)argcount;		/* the first value at cpp is argc */
     cp2 = argbuf;
     for (i = 0; i < argcount; i++) {      /* copy each argument and set argv */
-        TracePrintf(LOG, "%d\n", i);
         *cpp++ = cp;
         strcpy(cp, cp2);
         cp += strlen(cp) + 1;

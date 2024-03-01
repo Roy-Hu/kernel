@@ -10,6 +10,9 @@ typedef void (*TrapHandlerPtr)(ExceptionInfo *);
 
 typedef struct pcb {
     int pid;
+    SavedContext ctx;
+
+    struct pcb *next;
 } PCB;
 
 typedef struct pte PTE;
@@ -32,3 +35,7 @@ extern PTE *ptr0, ptr1[PAGE_TABLE_LEN];
 extern int vmEnable;
 
 extern void *kernelBreak;
+
+extern PCB *currentPCB, *idlePCB;
+
+extern int processId;
