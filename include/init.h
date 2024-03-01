@@ -1,10 +1,9 @@
 #include <comp421/hardware.h>
 
-#include "kernel.h"
-#include "trap.h"
+#include "global.h"
 
-void initInterruptVectorTable(TrapHandlerPtr *);
+void initInterruptVectorTable();
 
-void *initFreePhysicalFrame(PhysicalFrame *, int, void *);
+void initPageTable();
 
-PTE *initPageTable(PTE *, void *);
+void *initFreePhysicalFrame();

@@ -1,7 +1,8 @@
-#include "trap.h";
+#include "trap.h"
+#include "global.h"
 
 void TrapKernelHandler(ExceptionInfo *info) {
-    TracePrintf(1, "TrapKernelHandler\n");
+    TracePrintf(LOG, "TrapKernelHandler\n");
 
     Halt();
 }

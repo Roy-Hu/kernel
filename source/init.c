@@ -3,61 +3,63 @@
 
 #include "init.h"
 #include "call.h"
+#include "trap.h"
+#include "pagetable.h"
 
 // Initialize the interrupt vector table entries for each type of interrupt, exception, or trap, by making
 // them point to the correct handler functions in your kernel.
-void initInterruptVectorTable(TrapHandlerPtr *InterruptVectorTable) {
+void initInterruptVectorTable() {
     TracePrintf(LOG, "start init Interrupt Vector Table\n");
 
-	InterruptVectorTable[TRAP_KERNEL] = &TrapKernelHandler;
-	InterruptVectorTable[TRAP_CLOCK] = &TrapClockHandler;
-	InterruptVectorTable[TRAP_ILLEGAL] = &TrapIllegalHandler;
-	InterruptVectorTable[TRAP_MEMORY] = &TrapMemoryHandler;
-	InterruptVectorTable[TRAP_MATH] = &TrapMathHandler;
-	InterruptVectorTable[TRAP_TTY_RECEIVE] = &TrapTtyReceiveHandler;
-	InterruptVectorTable[TRAP_TTY_TRANSMIT] = &TrapTtyTransmitHandler;
+	interruptVectorTable[TRAP_KERNEL] = &TrapKernelHandler;
+	interruptVectorTable[TRAP_CLOCK] = &TrapClockHandler;
+	interruptVectorTable[TRAP_ILLEGAL] = &TrapIllegalHandler;
+	interruptVectorTable[TRAP_MEMORY] = &TrapMemoryHandler;
+	interruptVectorTable[TRAP_MATH] = &TrapMathHandler;
+	interruptVectorTable[TRAP_TTY_RECEIVE] = &TrapTtyReceiveHandler;
+	interruptVectorTable[TRAP_TTY_TRANSMIT] = &TrapTtyTransmitHandler;
 
     // Set the unused entries to NULL
     int i;
-    for (i = TRAP_TTY_TRANSMIT + 1; i < TRAP_VECTOR_SIZE; i++) InterruptVectorTable[i] = NULL;
+    for (i = TRAP_TTY_TRANSMIT + 1; i < TRAP_VECTOR_SIZE; i++) interruptVectorTable[i] = NULL;
 
     // Initialize the REG_VECTOR_BASE privileged machine register to point to your interrupt vector table.
-	WriteRegister(REG_VECTOR_BASE, (RCS421RegVal) InterruptVectorTable);
+	WriteRegister(REG_VECTOR_BASE, (RCS421RegVal) interruptVectorTable);
 }
 
 // Build a structure to keep track of what page frames in physical memory are free
-void *initFreePhysicalFrame(PhysicalFrame *PhysicalFrames, int totalPhysicalFrameNum, void *brk) {
+void *initFreePhysicalFrame() {
     TracePrintf(LOG, "start init Free Physical Page\n");
 
     // Allocate hysical space for the isFree array
-    PhysicalFrames->isFree = (int *)brk;
-    PhysicalFrames->totalPFN = totalPhysicalFrameNum;
+    physicalFrames.isFree = (int *)kernelBreak;
+    physicalFrames.totalPFN = totalPhysicalFrameNum;
     int allocatedMemory = totalPhysicalFrameNum * sizeof(int);
 
     int kernelStackBasePgNum = DOWN_TO_PAGE(KERNEL_STACK_BASE) >> PAGESHIFT;
 
-    long newBrk = UP_TO_PAGE(brk + allocatedMemory);
+    long newBrk = UP_TO_PAGE(kernelBreak + allocatedMemory);
     int newBrkPgNum = newBrk >> PAGESHIFT;
 
-    PhysicalFrames->freePFN = 0;
+    physicalFrames.freePFN = 0;
     
     int pfn;
     for (pfn = 0; pfn < totalPhysicalFrameNum; pfn++) {
         // The page for kernel stack and kernel heap are not free (According to Fig 4, not very sure about this part.)
         // The page (at VMEM_1_LIMIT - PAGESIZE) for region0 page table is not free
-        if ((pfn >= kernelStackBasePgNum && pfn < newBrkPgNum) || pfn == PAGE_TABLE_LEN * 2 - 1) PhysicalFrames->isFree[pfn] = 0;
+        if ((pfn >= kernelStackBasePgNum && pfn < newBrkPgNum) || pfn == PAGE_TABLE_LEN * 2 - 1) physicalFrames.isFree[pfn] = 0;
         else {
-            PhysicalFrames->freePFN++;
-            PhysicalFrames->isFree[pfn] = 1;
+            physicalFrames.freePFN++;
+            physicalFrames.isFree[pfn] = 1;
         }
     }
 
-    TracePrintf(TRC, "free Physical Page (Total - kernel - region0 table) %d\n", PhysicalFrames->freePFN);
+    TracePrintf(TRC, "free Physical Page (Total - kernel - region0 table) %d\n", physicalFrames.freePFN);
 
     return (void *)newBrk;
 }
 
-PTE *initPageTable(PTE *ptr1, void *brk) {
+void initPageTable() {
     TracePrintf(LOG, "start init Page Table\n");
 
     // Piazza @84
@@ -69,7 +71,7 @@ PTE *initPageTable(PTE *ptr1, void *brk) {
     // (at virtual address VMEM_1_LIMIT - PAGESIZE) by using the top PTE in the Region 1 
     // page table you are setting up.
 
-    PTE *ptr0 = (PTE *)(VMEM_1_LIMIT - PAGESIZE);
+    ptr0 = (PTE *)(VMEM_1_LIMIT - PAGESIZE);
 
     setPTE(&ptr1[PAGE_TABLE_LEN - 1], 2 * PAGE_TABLE_LEN - 1, 1, PROT_NONE, (PROT_READ | PROT_WRITE));
     // Becareful about the DOWN_TO_PAGE and UP_TO_PAGE usage
@@ -85,7 +87,7 @@ PTE *initPageTable(PTE *ptr1, void *brk) {
         setPTE(&ptr0[PAGE_TABLE_LEN - 1 - i], PAGE_TABLE_LEN - 1 - i, 1, PROT_NONE, (PROT_READ | PROT_WRITE));
     }
 
-    for (i = 0; i < UP_TO_PAGE(brk - VMEM_1_BASE) >> PAGESHIFT; i++) {
+    for (i = 0; i < UP_TO_PAGE(kernelBreak - VMEM_1_BASE) >> PAGESHIFT; i++) {
         // Kernel data/bss/heap
         setPTE(&ptr1[i], i + PAGE_TABLE_LEN, 1, PROT_NONE, (PROT_READ | PROT_WRITE));
         
@@ -96,6 +98,4 @@ PTE *initPageTable(PTE *ptr1, void *brk) {
     //Setup REG_PTR0 and REG_PTR1
 	WriteRegister(REG_PTR0, (RCS421RegVal) ptr0);
 	WriteRegister(REG_PTR1, (RCS421RegVal) ptr1);
-
-    return ptr0;
 }

@@ -1,6 +1,7 @@
 #include "trap.h"
 #include "call.h"
 #include "init.h"
+#include "pagetable.h"
 
 #include <stdio.h>
 #include <fcntl.h>
@@ -10,17 +11,6 @@
 
 #include <comp421/loadinfo.h>
 
-int totalPhysicalFrameNum;
-
-TrapHandlerPtr interruptVectorTable[TRAP_VECTOR_SIZE];
-
-PhysicalFrame physicalFrames;
-
-PTE *ptr0, ptr1[PAGE_TABLE_LEN];
-
-int vmEnable = 0;
-
-void *kernelBreak;
 // 3.3 Kernel Boot Entry Point
 
 // Kernel Start procedure should initialize the operating system kernel and then return,
@@ -46,6 +36,8 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size,
 	
 	void *newBrk;
 
+    vmEnable = 0;
+
 	totalPhysicalFrameNum = DOWN_TO_PAGE(pmem_size) >> PAGESHIFT;
 
 	TracePrintf(LOG, "Kernel Start, Total Physical Memory %d Btyes/%d Pages\n", pmem_size, totalPhysicalFrameNum);
@@ -53,14 +45,14 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size,
 	SetKernelBrk(orig_brk);
 
 	// Initialize the interrupt vector table and REG_VECTOR_BASE privileged machine register
-	initInterruptVectorTable(interruptVectorTable);
+	initInterruptVectorTable();
 
 	// Initialize the free physical page frames
-	newBrk = initFreePhysicalFrame(&physicalFrames, totalPhysicalFrameNum, kernelBreak);
+	newBrk = initFreePhysicalFrame();
 	SetKernelBrk(newBrk);
 
 	// Initialize the page table
-	ptr0 = initPageTable(ptr1, kernelBreak);
+	initPageTable();
     
     TracePrintf(TRC, "ptr0 %p, ptr1 %p\n", ptr0, ptr1);
 
@@ -264,7 +256,7 @@ int LoadProgram(char *name, char **args, ExceptionInfo *info) {
     TracePrintf(TRC, "LoadProgram: free old KERNEL_STACK_PAGES 0 ~ %d\n", PAGE_TABLE_LEN - KERNEL_STACK_PAGES);
     for (i = 0; i < PAGE_TABLE_LEN - KERNEL_STACK_PAGES; i++) {
         if (ptr0[i].valid == 1) {
-            freePhysicalFrame(&physicalFrames, ptr0[i].pfn);
+            freePhysicalFrame(ptr0[i].pfn);
             ptr0[i].valid = 0;
         }
     }
