@@ -1,7 +1,13 @@
-#include "trap.h"
-#include "global.h"
+#include <stddef.h>
+#include <stdbool.h>
 
 #include <comp421/yalnix.h>
+
+#include "trap.h"
+#include "pcb.h"
+#include "global.h"
+
+TrapHandlerPtr interruptVectorTable[TRAP_VECTOR_SIZE];
 
 void TrapKernelHandler(ExceptionInfo *info) {
     TracePrintf(LOG, "TrapKernelHandler\n");
@@ -22,14 +28,14 @@ void TrapKernelHandler(ExceptionInfo *info) {
         break;
     case YALNIX_GETPID: 
         info->regs[0] = GetPid();
-        TracePrintf(LOG, "GetPid %d\n", currentPCB->pid);
+        TracePrintf(LOG, "GetPid %d\n", runningPCB->pid);
 
         break;
     case YALNIX_BRK:
         /* code */
         break;
     case YALNIX_DELAY:  
-        /* code */
+        Delay(info->regs[1]);
         break;
     case YALNIX_TTY_READ:
         /* code */
@@ -45,31 +51,47 @@ void TrapKernelHandler(ExceptionInfo *info) {
 }
 
 void TrapClockHandler(ExceptionInfo *info) {
-    TracePrintf(1, "TrapClockHandler\n");
-    Halt();
+    TracePrintf(LOG, "TrapClockHandler\n");
+    clocktime++;
+    bool flag = false;
+
+    if (waitingPCB != NULL) {
+
+        while (waitingPCB != NULL && waitingPCB->readyTime <= clocktime) {
+            flag = true;
+            PCB *pcb = popPCB(WAITING);
+            pcb->state = READY;
+            pushPCB(pcb);
+        }
+
+    }
+
+    if (runningPCB == idlePCB && flag) {
+        ContextSwitch(MySwitchFunc, &runningPCB->ctx, (void *)runningPCB, (void *)popPCB(READY));
+    }
 }
 
 void TrapIllegalHandler(ExceptionInfo *info) {
-    TracePrintf(1, "TrapIllegalHandler\n");
+    TracePrintf(LOG, "TrapIllegalHandler\n");
     Halt();
 }
 
 void TrapMemoryHandler(ExceptionInfo *info) {
-    TracePrintf(1, "TrapMemoryHandler\n");
+    TracePrintf(LOG, "TrapMemoryHandler\n");
     Halt();
 }
 
 void TrapMathHandler(ExceptionInfo *info) {
-    TracePrintf(1, "TrapMathHandler\n");
+    TracePrintf(LOG, "TrapMathHandler\n");
     Halt();
 }
 
 void TrapTtyReceiveHandler(ExceptionInfo *info) {
-    TracePrintf(1, "TrapTtyReceiveHandler\n");
+    TracePrintf(LOG, "TrapTtyReceiveHandler\n");
     Halt();
 }   
 
 void TrapTtyTransmitHandler(ExceptionInfo *info) {
-    TracePrintf(1, "TrapTtyTransmitHandler\n");
+    TracePrintf(LOG, "TrapTtyTransmitHandler\n");
     Halt();
 }

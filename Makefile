@@ -33,8 +33,8 @@ ALL = yalnix idle init
 #	make up your kernel, and KERNEL_SRCS should  be a list of
 #	the corresponding source files that make up your kernel.
 #
-KERNEL_OBJS = source/global.o source/call.o source/pagetable.o source/trap.o source/init.o yalnix.o
-KERNEL_SRCS = source/global.c source/call.c source/pagetable.c source/trap.c source/init.c yalnix.c
+KERNEL_OBJS = source/global.o source/call.o source/pagetable.o source/trap.o source/init.o source/pcb.o yalnix.o
+KERNEL_SRCS = source/global.c source/call.c source/pagetable.c source/trap.c source/init.c source/pcb.c yalnix.c
 
 #
 #	You should not have to modify anything else in this Makefile

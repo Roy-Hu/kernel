@@ -1,9 +1,8 @@
-#include <stdlib.h>
-#include <stdio.h>
+#include <stddef.h>
 
 #include "init.h"
-#include "call.h"
 #include "trap.h"
+#include "global.h"
 #include "pagetable.h"
 
 // Initialize the interrupt vector table entries for each type of interrupt, exception, or trap, by making
@@ -28,26 +27,24 @@ void initInterruptVectorTable() {
 }
 
 // Build a structure to keep track of what page frames in physical memory are free
-void *initFreePhysicalFrame() {
+void initFreePhysicalFrame() {
     TracePrintf(LOG, "start init Free Physical Page\n");
 
     // Allocate hysical space for the isFree array
-    physicalFrames.isFree = (int *)kernelBreak;
+    physicalFrames.isFree = malloc(totalPhysicalFrameNum * sizeof(int));
     physicalFrames.totalPFN = totalPhysicalFrameNum;
-    int allocatedMemory = totalPhysicalFrameNum * sizeof(int);
 
     int kernelStackBasePgNum = DOWN_TO_PAGE(KERNEL_STACK_BASE) >> PAGESHIFT;
 
-    long newBrk = UP_TO_PAGE(kernelBreak + allocatedMemory);
-    int newBrkPgNum = newBrk >> PAGESHIFT;
-
     physicalFrames.freePFN = 0;
-    
+
+    int kernelBreakNpg = UP_TO_PAGE(kernelBreak - VMEM_1_BASE) >> PAGESHIFT;
+
     int pfn;
     for (pfn = 0; pfn < totalPhysicalFrameNum; pfn++) {
         // The page for kernel stack and kernel heap are not free (According to Fig 4, not very sure about this part.)
         // The page (at VMEM_1_LIMIT - PAGESIZE) for region0 page table is not free
-        if ((pfn >= kernelStackBasePgNum && pfn < newBrkPgNum) || pfn == PAGE_TABLE_LEN * 2 - 1) physicalFrames.isFree[pfn] = 0;
+        if ((pfn >= kernelStackBasePgNum && pfn < kernelBreakNpg) || pfn == INIT_PT0_PFN) physicalFrames.isFree[pfn] = 0;
         else {
             physicalFrames.freePFN++;
             physicalFrames.isFree[pfn] = 1;
@@ -55,8 +52,6 @@ void *initFreePhysicalFrame() {
     }
 
     TracePrintf(TRC, "free Physical Page (Total - kernel - region0 table) %d\n", physicalFrames.freePFN);
-
-    return (void *)newBrk;
 }
 
 void initPageTable() {
@@ -73,7 +68,7 @@ void initPageTable() {
 
     ptr0 = (PTE *)(VMEM_1_LIMIT - PAGESIZE);
 
-    setPTE(&ptr1[PAGE_TABLE_LEN - 1], 2 * PAGE_TABLE_LEN - 1, 1, PROT_NONE, (PROT_READ | PROT_WRITE));
+    setPTE(&ptr1[PT0_VPN], INIT_PT0_PFN, 1, PROT_NONE, (PROT_READ | PROT_WRITE));
     // Becareful about the DOWN_TO_PAGE and UP_TO_PAGE usage
     
     int i = 0;

@@ -1,8 +1,9 @@
-#include "trap.h"
 #include "init.h"
-#include "pagetable.h"
+#include "trap.h"
+#include "pcb.h"
+#include "global.h"
 
-#include <stdio.h>
+#include <stddef.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <string.h>
@@ -30,16 +31,6 @@
 // your Linux terminal) to start the machine and thus the kernel. The cmd_args vector is terminated
 // by a NULLpointer.
 
-PCB *createPCB(int pid) {
-    TracePrintf(LOG, "Create New PCB %d\n", pid);
-
-    PCB *pcb = (PCB *)malloc(sizeof(PCB));
-
-    pcb->pid = 0;
-    pcb->next = NULL;
-
-    return pcb;
-}
 
 void KernelStart(ExceptionInfo *info, unsigned int pmem_size, 
 	void *orig_brk, char **cmd_args) {
@@ -56,8 +47,7 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size,
 	initInterruptVectorTable();
 
 	// Initialize the free physical page frames
-	newBrk = initFreePhysicalFrame();
-	SetKernelBrk(newBrk);
+	initFreePhysicalFrame();
 
 	// Initialize the page table
 	initPageTable();
@@ -71,12 +61,12 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size,
 
 	TracePrintf(LOG, "Enable vitrual memory\n");
 
-    PCB *idlePCB = createPCB(0);
-    PCB *initPCB = createPCB(1);
+    initPCB = createPCB(INIT_PID);
+    idlePCB = createPCB(IDLE_PID);
 
-    currentPCB = initPCB;
-    LoadProgram("idle", cmd_args, info);
-    
+    runningPCB = initPCB;
+    runningPCB->state = RUNNING;
+
     int status = LoadProgram(cmd_args[0], cmd_args, info);
 
     if (status == -2) TracePrintf(ERR, "LoadProgram Error\n");
@@ -86,6 +76,7 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size,
 
 // 3.4.2 Kernel Memory Management
 int SetKernelBrk(void *addr) {
+    TracePrintf(LOG, "Set Kernel Break %p\n", addr);
 	if (!vmEnable) {
 		if ((unsigned long)addr > VMEM_1_LIMIT) return -1;
 
@@ -94,7 +85,7 @@ int SetKernelBrk(void *addr) {
 		TracePrintf(INF, "New kernel break %p, page num %d\n", kernelBreak, DOWN_TO_PAGE(kernelBreak) >> PAGESHIFT);
 	} else {
 		TracePrintf(INF, "New kernel break (Vitrual Memory Enable)\n");
-        int kernelBreakVpn = DOWN_TO_PAGE(kernelBreak - VMEM_1_BASE) >> PAGESHIFT;
+        int kernelBreakVpn = UP_TO_PAGE(kernelBreak - VMEM_1_BASE) >> PAGESHIFT;
 
         if (kernelBreak < VMEM_1_BASE || kernelBreak > VMEM_1_LIMIT) {
             TracePrintf(ERR, "kernel break %p(VPN %d) out of range\n", kernelBreak, kernelBreakVpn);
@@ -103,7 +94,7 @@ int SetKernelBrk(void *addr) {
 
         int vpn = UP_TO_PAGE(addr - VMEM_1_BASE) >> PAGESHIFT;
 
-        TracePrintf(TRC, "New kernel break's VPN %d\n", vpn);
+        TracePrintf(TRC, "New kernel break's VPN %d, prev VPN %d\n", vpn, kernelBreakVpn);
         // Last Page in page table 1 is reserved for page table 0
         if (vpn + 1 > PAGE_TABLE_LEN) {
             TracePrintf(ERR, "New kernel break's VPN %d out of range\n", vpn);
@@ -118,22 +109,19 @@ int SetKernelBrk(void *addr) {
 
         for (i = 0; i < pageNum; i++) {
             pfn = getFreePhysicalFrame(&physicalFrames);
-            if (pfn == -1) {
-                TracePrintf(ERR, "No free physical frame\n");
-                return -1;
-            }
 
-            setPTE(&ptr0[kernelBreakVpn + i], pfn, 1, PROT_READ | PROT_WRITE, PROT_READ | PROT_WRITE);
+            if (pfn == -1) return -1;
+
+            TracePrintf(TRC, "Set Kernel Break: set page %d, pfn %d\n", kernelBreakVpn + i, pfn);
+            setPTE(&ptr1[kernelBreakVpn + i], pfn, 1, PROT_NONE, PROT_READ | PROT_WRITE);
         }
+
+        WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
 
         kernelBreak = addr;
 	}
 
 	return 0;
-}
-
-// 3.5 ContextSwitching
-SavedContext *MySwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
 }
 
 /*
@@ -334,7 +322,6 @@ int LoadProgram(char *name, char **args, ExceptionInfo *info) {
     for (i = MEM_INVALID_PAGES; i < MEM_INVALID_PAGES + text_npg; i++) {
         pfn = getFreePhysicalFrame(&physicalFrames);
         if (pfn == -1) {
-            TracePrintf(ERR, "No free physical frame\n");
             free(argbuf);
             close(fd);
             return (-1);
@@ -355,7 +342,6 @@ int LoadProgram(char *name, char **args, ExceptionInfo *info) {
     for (i = MEM_INVALID_PAGES + text_npg; i < MEM_INVALID_PAGES + text_npg + data_bss_npg; i++) {
         pfn = getFreePhysicalFrame(&physicalFrames);
         if (pfn == -1) {
-            TracePrintf(ERR, "No free physical frame\n");
             free(argbuf);
             close(fd);
             return (-1);
@@ -378,7 +364,6 @@ int LoadProgram(char *name, char **args, ExceptionInfo *info) {
     for (i = (USER_STACK_LIMIT >> PAGESHIFT) - stack_npg; i < (USER_STACK_LIMIT >> PAGESHIFT); i++) {
         pfn = getFreePhysicalFrame(&physicalFrames);
         if (pfn == -1) {
-            TracePrintf(ERR, "No free physical frame\n");
             free(argbuf);
             close(fd);
             return (-1);
@@ -394,7 +379,6 @@ int LoadProgram(char *name, char **args, ExceptionInfo *info) {
      */
 
     WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
-
 
     TracePrintf(TRC, "LoadProgram: flush TLB\n");
     /*

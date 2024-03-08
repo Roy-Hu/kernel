@@ -1,4 +1,8 @@
+#include <stddef.h>
+
 #include <comp421/yalnix.h>
+
+#include "pcb.h"
 #include "global.h"
 
 int Fork(void) {
@@ -17,7 +21,7 @@ int Wait(int *status_ptr) {
 }
 
 int GetPid(void) {
-    return currentPCB->pid;
+    return runningPCB->pid;
 }
 
 int Brk(void *addr) {
@@ -25,6 +29,20 @@ int Brk(void *addr) {
 }
 
 int Delay (int clock_ticks) {
+    runningPCB->readyTime = clocktime + clock_ticks;
+    runningPCB->state = WAITING;
+
+    TracePrintf(LOG, "Delay %d for pid %d\n", runningPCB->readyTime, runningPCB->pid);
+
+    pushPCB(runningPCB);
+
+    if (readyPCB == NULL) {
+        TracePrintf(LOG, "Switch to idle\n");
+        ContextSwitch(MySwitchFunc, &runningPCB->ctx, (void *)runningPCB, (void *)idlePCB);
+    } else {
+        ContextSwitch(MySwitchFunc, &runningPCB->ctx, (void *)runningPCB, (void *)popPCB(READY));
+    }
+
     return 0;
 }
 

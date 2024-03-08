@@ -1,5 +1,9 @@
 #include <comp421/hardware.h>
 
+typedef void (*TrapHandlerPtr)(ExceptionInfo *);
+
+extern TrapHandlerPtr interruptVectorTable[TRAP_VECTOR_SIZE];
+
 //  3.2 Interrupt,Exception,and Trap Handling
 void TrapKernelHandler(ExceptionInfo *);
 
