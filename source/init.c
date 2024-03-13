@@ -66,7 +66,13 @@ void initPageTable() {
     // (at virtual address VMEM_1_LIMIT - PAGESIZE) by using the top PTE in the Region 1 
     // page table you are setting up.
 
+    /*Init ptr0*/
+    head_ptr0 = malloc(sizeof(struct page_table0));
     ptr0 = (PTE *)(VMEM_1_LIMIT - PAGESIZE);
+    head_ptr0->is_full = 1;
+    head_ptr0->start_addr = ptr0;
+    head_ptr0->nextPage = NULL;
+    // = page_table;
 
     setPTE(&ptr1[PT0_VPN], INIT_PT0_PFN, 1, PROT_NONE, (PROT_READ | PROT_WRITE));
     // Becareful about the DOWN_TO_PAGE and UP_TO_PAGE usage
@@ -75,11 +81,14 @@ void initPageTable() {
     // a page table entry should be built so that the new vpn = pfn
 
     // initialize region0 page table
-    for (i = 0; i < PAGE_TABLE_LEN; i++) setPTE(&ptr0[i], -1, 0, PROT_NONE, PROT_NONE);
+    // for (i = 0; i < PAGE_TABLE_LEN; i++) setPTE(&ptr0[i], -1, 0, PROT_NONE, PROT_NONE);
 
-    // Kernel stack
-    for (i = 0; i < KERNEL_STACK_PAGES; i++) {
-        setPTE(&ptr0[PAGE_TABLE_LEN - 1 - i], PAGE_TABLE_LEN - 1 - i, 1, PROT_NONE, (PROT_READ | PROT_WRITE));
+    // Kernel stack from r0
+    int adr;
+
+    for (i = KERNEL_STACK_BASE; i < KERNEL_STACK_LIMIT; i+=PAGESIZE) {
+        adr = i  >> PAGESHIFT;
+        setPTE(&ptr0[adr], i>>PAGESHIFT, 1, PROT_NONE, (PROT_READ | PROT_WRITE));
     }
 
     for (i = 0; i < UP_TO_PAGE(kernelBreak - VMEM_1_BASE) >> PAGESHIFT; i++) {

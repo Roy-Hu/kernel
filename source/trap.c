@@ -1,6 +1,5 @@
 #include <stddef.h>
 #include <stdbool.h>
-
 #include <comp421/yalnix.h>
 
 #include "trap.h"
@@ -15,7 +14,7 @@ void TrapKernelHandler(ExceptionInfo *info) {
     switch (info->code)
     {
     case YALNIX_FORK:
-        /* code */
+        info->regs[0] = Fork();
         break;
     case YALNIX_EXEC:
         /* code */
@@ -29,16 +28,16 @@ void TrapKernelHandler(ExceptionInfo *info) {
     case YALNIX_GETPID: 
         info->regs[0] = GetPid();
         TracePrintf(LOG, "GetPid %d\n", runningPCB->pid);
-
         break;
     case YALNIX_BRK:
-        /* code */
+        TracePrintf(LOG, "Trap\n");
+        info->regs[0] = Brk((void*)(info->regs[1]));
         break;
     case YALNIX_DELAY:  
         Delay(info->regs[1]);
         break;
     case YALNIX_TTY_READ:
-        /* code */
+        /*code*/
         break;
     case YALNIX_TTY_WRITE:  
         /* code */
@@ -54,9 +53,12 @@ void TrapClockHandler(ExceptionInfo *info) {
     TracePrintf(LOG, "TrapClockHandler\n");
     clocktime++;
     bool flag = false;
+    TracePrintf(LOG, "previous \n");
 
+    /*There are waiting processes, push the waiting process to ready if reached
+      time */
     if (waitingPCB != NULL) {
-
+        TracePrintf(LOG, "Enter first if\n");
         while (waitingPCB != NULL && waitingPCB->readyTime <= clocktime) {
             flag = true;
             PCB *pcb = popPCB(WAITING);
@@ -65,10 +67,14 @@ void TrapClockHandler(ExceptionInfo *info) {
         }
 
     }
-
-    if (runningPCB == idlePCB && flag) {
-        ContextSwitch(MySwitchFunc, &runningPCB->ctx, (void *)runningPCB, (void *)popPCB(READY));
-    }
+    TracePrintf(LOG, "Exit first if\n");
+    // if (runningPCB == idlePCB && flag) {
+    //     TracePrintf(LOG, "Enter second if\n");
+    PCB *p = popPCB(READY);
+    // No ready PCB as for now
+    if (p != NULL)
+        TracePrintf(LOG, "Popped PCB pid: %d\n", p->pid);
+    ContextSwitch(switch_clock_trap, runningPCB->ctx, (void *)runningPCB, p);
 }
 
 void TrapIllegalHandler(ExceptionInfo *info) {

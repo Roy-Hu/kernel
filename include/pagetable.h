@@ -1,3 +1,7 @@
+#ifndef PAGETABLE_H_
+#define PAGETABLE_H_
+
+
 #include <comp421/hardware.h>
 
 #define INIT_PT0_PFN (2 * PAGE_TABLE_LEN - 1)
@@ -5,9 +9,22 @@
 
 typedef struct pte PTE;
 
+// struct page_table0*;
+/*keep track of the head of pagetable*/
+
 extern PTE *ptr0, ptr1[PAGE_TABLE_LEN];
 
+/*current ptr0*/
+// extern PTE *ptr0;
+
 extern void *kernelBreak;
+
+/*keeping track of the base address of the pagetable and its availability*/
+typedef struct page_table0 {
+    int is_full;
+    void* start_addr;
+    struct page_table0 *nextPage;
+} page_table0;
 
 typedef struct physicalFrame {
     int totalPFN;
@@ -19,8 +36,16 @@ extern int totalPhysicalFrameNum;
 
 extern PhysicalFrame physicalFrames;
 
+extern page_table0 *head_ptr0;
+
 void freePhysicalFrame(int pfn);
 
 int getFreePhysicalFrame();
 
+int check_enough_pages_fork();
+
+PTE* allocateNewPage();
+
 void setPTE(struct pte *entry, int pfn, int valid, int uprot, int kprot);
+
+#endif

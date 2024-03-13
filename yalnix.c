@@ -11,6 +11,7 @@
 
 #include <comp421/loadinfo.h>
 
+
 // 3.3 Kernel Boot Entry Point
 
 // Kernel Start procedure should initialize the operating system kernel and then return,
@@ -61,15 +62,28 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size,
 
 	TracePrintf(LOG, "Enable vitrual memory\n");
 
-    initPCB = createPCB(INIT_PID);
     idlePCB = createPCB(IDLE_PID);
 
-    runningPCB = initPCB;
+    runningPCB = idlePCB;
     runningPCB->state = RUNNING;
 
-    int status = LoadProgram(cmd_args[0], cmd_args, info);
+    int status = LoadProgram("idle", cmd_args, info);
 
     if (status == -2) TracePrintf(ERR, "LoadProgram Error\n");
+
+    initPCB = createPCB(INIT_PID);
+
+    /*switch to init*/
+    ContextSwitch(test_init, runningPCB->ctx, runningPCB, initPCB);
+    TracePrintf(LOG, "Arrived Here\n");
+    if(runningPCB->pid==IDLE_PID)
+        LoadProgram("idle",cmd_args, info);
+    else if(runningPCB->pid==INIT_PID) {
+        if (cmd_args==NULL || cmd_args[0]==NULL) 
+            LoadProgram("init",cmd_args,info);
+        else 
+            LoadProgram(cmd_args[0],cmd_args, info);
+    }
     
     TracePrintf(LOG, "KernelStart Success\n");
 }
@@ -87,6 +101,7 @@ int SetKernelBrk(void *addr) {
 		TracePrintf(INF, "New kernel break (Vitrual Memory Enable)\n");
         int kernelBreakVpn = UP_TO_PAGE(kernelBreak - VMEM_1_BASE) >> PAGESHIFT;
 
+        // Kernel Break out of range
         if (kernelBreak < VMEM_1_BASE || kernelBreak > VMEM_1_LIMIT) {
             TracePrintf(ERR, "kernel break %p(VPN %d) out of range\n", kernelBreak, kernelBreakVpn);
             return -1;
@@ -107,8 +122,9 @@ int SetKernelBrk(void *addr) {
         int pageNum = vpn - kernelBreakVpn;
         int i, pfn;
 
+        // allocate physical address for the new kernel page    
         for (i = 0; i < pageNum; i++) {
-            pfn = getFreePhysicalFrame(&physicalFrames);
+            pfn = getFreePhysicalFrame();
 
             if (pfn == -1) return -1;
 
@@ -116,7 +132,7 @@ int SetKernelBrk(void *addr) {
             setPTE(&ptr1[kernelBreakVpn + i], pfn, 1, PROT_NONE, PROT_READ | PROT_WRITE);
         }
 
-        WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
+        //WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
 
         kernelBreak = addr;
 	}
@@ -290,11 +306,13 @@ int LoadProgram(char *name, char **args, ExceptionInfo *info) {
 
     TracePrintf(TRC, "LoadProgram: free old KERNEL_STACK_PAGES 0 ~ %d\n", PAGE_TABLE_LEN - KERNEL_STACK_PAGES);
     for (i = 0; i < PAGE_TABLE_LEN - KERNEL_STACK_PAGES; i++) {
-        if (ptr0[i].valid == 1) {
-            freePhysicalFrame(ptr0[i].pfn);
-            ptr0[i].valid = 0;
+        if (runningPCB->ptr0[i].valid == 1) {
+            freePhysicalFrame(runningPCB->ptr0[i].pfn);
+            runningPCB->ptr0[i].valid = 0;
+           
         }
     }
+    
 
     /*
      *  Fill in the page table with the right number of text,
@@ -307,7 +325,7 @@ int LoadProgram(char *name, char **args, ExceptionInfo *info) {
     // >>>> Leave the first MEM_INVALID_PAGES number of PTEs in the
     // >>>> Region 0 page table unused (and thus invalid)
 
-    for (i = 0; i < MEM_INVALID_PAGES; i++) ptr0[i].valid = 0;
+    for (i = 0; i < MEM_INVALID_PAGES; i++) runningPCB->ptr0[i].valid = 0;
 
     /* First, the text pages */
     // >>>> For the next text_npg number of PTEs in the Region 0
@@ -320,14 +338,14 @@ int LoadProgram(char *name, char **args, ExceptionInfo *info) {
 
     TracePrintf(TRC, "LoadProgram: set text pages %d ~ %d\n", MEM_INVALID_PAGES, MEM_INVALID_PAGES + text_npg);
     for (i = MEM_INVALID_PAGES; i < MEM_INVALID_PAGES + text_npg; i++) {
-        pfn = getFreePhysicalFrame(&physicalFrames);
+        pfn = getFreePhysicalFrame();
         if (pfn == -1) {
             free(argbuf);
             close(fd);
             return (-1);
         }
 
-        setPTE(&ptr0[i], pfn, 1, PROT_READ | PROT_EXEC, PROT_READ | PROT_WRITE);
+        setPTE(&runningPCB->ptr0[i], pfn, 1, PROT_READ | PROT_EXEC, PROT_READ | PROT_WRITE);
     }
 
     // /* Then the data and bss pages */
@@ -340,14 +358,14 @@ int LoadProgram(char *name, char **args, ExceptionInfo *info) {
 
     TracePrintf(TRC, "LoadProgram: set data and bss pages %d ~ %d\n", MEM_INVALID_PAGES + text_npg, MEM_INVALID_PAGES + text_npg + data_bss_npg);
     for (i = MEM_INVALID_PAGES + text_npg; i < MEM_INVALID_PAGES + text_npg + data_bss_npg; i++) {
-        pfn = getFreePhysicalFrame(&physicalFrames);
+        pfn = getFreePhysicalFrame();
         if (pfn == -1) {
             free(argbuf);
             close(fd);
             return (-1);
         }
 
-        setPTE(&ptr0[i], getFreePhysicalFrame(&physicalFrames), 1, PROT_READ | PROT_WRITE, PROT_READ | PROT_WRITE);
+        setPTE(&runningPCB->ptr0[i], pfn, 1, PROT_READ | PROT_WRITE, PROT_READ | PROT_WRITE);
     }
 
     /* And finally the user stack pages */
@@ -359,17 +377,17 @@ int LoadProgram(char *name, char **args, ExceptionInfo *info) {
     // >>>>     kprot = PROT_READ | PROT_WRITE
     // >>>>     uprot = PROT_READ | PROT_WRITE
     // >>>>     pfn   = a new page of physical memory
-
+    long temp = (USER_STACK_LIMIT>>PAGESHIFT)-1;
     TracePrintf(TRC, "LoadProgram: set user stack pages %d ~ %d\n", (USER_STACK_LIMIT >> PAGESHIFT) - stack_npg, USER_STACK_LIMIT >> PAGESHIFT);
-    for (i = (USER_STACK_LIMIT >> PAGESHIFT) - stack_npg; i < (USER_STACK_LIMIT >> PAGESHIFT); i++) {
-        pfn = getFreePhysicalFrame(&physicalFrames);
+    for (i = 0; i < stack_npg; i++) {
+        pfn = getFreePhysicalFrame();
         if (pfn == -1) {
             free(argbuf);
             close(fd);
             return (-1);
         }
 
-        setPTE(&ptr0[i], pfn, 1, PROT_READ | PROT_WRITE, PROT_READ | PROT_WRITE);
+        setPTE(&runningPCB->ptr0[temp - i], pfn, 1, PROT_READ | PROT_WRITE, PROT_READ | PROT_WRITE);
     }
 
     /*
@@ -408,7 +426,7 @@ int LoadProgram(char *name, char **args, ExceptionInfo *info) {
 
     TracePrintf(TRC, "LoadProgram: set program text pages %d ~ %d\n", MEM_INVALID_PAGES, MEM_INVALID_PAGES + text_npg);
     for (i = MEM_INVALID_PAGES; i < MEM_INVALID_PAGES + text_npg; i++) {
-        ptr0[i].kprot = PROT_READ | PROT_EXEC;
+        runningPCB->ptr0[i].kprot = PROT_READ | PROT_EXEC;
     }
 
     WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);

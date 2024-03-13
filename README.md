@@ -52,18 +52,19 @@ the Linux shell command line) in addition to the idle program.<del>
 - <del>Implement the GetPid kernel call and call it from the init process. At this point your kernel call
 interface would seem to be working correctly.<del>
 - **I will work on those functions, if I have finished, I will continue working on the rest. If you would like to, you can work on the rest also. But I think you have done a lot, great work!**:
-  - Implement the Delay kernel call and call it from the init process. Make sure your idle process then
+  - <del> Implement the Delay kernel call and call it from the init process. Make sure your idle process then
   runs for several clock ticks, until the delay period expires. This will be the first proof that blocking
-  of processes works and context switching work.
-  - Try Delay several times in the same program, to make sure your init and idle processes can correctly
+  of processes works and context switching work. <del>
+  - <del> Try Delay several times in the same program, to make sure your init and idle processes can correctly
   context switch back and forth several times. At this point you will have basically achieved the
-  recommended checkpoint described in Section 5.
-  - Implement SetKernelBrk to allow your kernel to allocate substantial chunks of memory. It is
+  recommended checkpoint described in Section 5. <del>
+  - <del>Implement SetKernelBrk to allow your kernel to allocate substantial chunks of memory. It is
   likely that you haven’t needed it up to this point, but you may have (in this case implement it earlier).
-  - Implement the Brk kernel call and call it from the init process. At this point you have a substantial
-  part of the memory management code working.
-- Implement theFork kernel call. If you get this to work you are almost done with the memory system.
-- Implement the Exec kernel call. You have already done something similar by initially loading init.
+  - <del>Implement the Brk kernel call and call it from the init process. At this point you have a substantial
+  part of the memory management code working. <del>
+- <del>Implement theFork kernel call. If you get this to work you are almost done with the memory system.
+- Implement the Exec kernel call. You have already done something similar by initially loading init. <del>
+### Fork is done, passed all but the last one test given under lab2sample folders. This probably need to be done with trap memory handler.
 - Write another small programthat does not domuch. Call Fork and Exec from your init process, to
 get this third program running as a child of init. Watch for context switches.
 - Implement and test the Exit and Wait kernel calls.

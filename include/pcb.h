@@ -1,3 +1,6 @@
+#ifndef PCB_H_
+#define PCB_H_
+
 #include <comp421/hardware.h>
 #include "pagetable.h"
 
@@ -13,12 +16,16 @@ typedef enum {
 
 typedef struct pcb {
     int pid;
-    
+
+    // physical address of pt0
     int pt0addr;
 
+    // pt0 >> PAGESHIFT
     int pt0pfn;
     
     int brk;
+
+    struct pcb *parent;
 
     int stackTop;
 
@@ -26,9 +33,10 @@ typedef struct pcb {
     
     int readyTime;
 
+    // ptr0
     PTE *ptr0;
     
-    SavedContext ctx;
+    SavedContext* ctx;
 
     struct pcb *next;
 } PCB;
@@ -44,4 +52,12 @@ void pushPCB(PCB *pcb);
 
 PCB *popPCB(STATE state);
 
-SavedContext *MySwitchFunc(SavedContext *ctxp, void *p1, void *p2);
+SavedContext *test_init(SavedContext *ctxp, void *p1, void *p2);
+
+SavedContext *switch_func(SavedContext *ctxp, void *p1, void *p2);
+
+SavedContext *switch_clock_trap(SavedContext *ctxp, void *p1, void *p2);
+
+SavedContext *switch_fork(SavedContext *ctxp, void *p1, void *p2);
+
+#endif

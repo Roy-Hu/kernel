@@ -11,3 +11,6 @@ DISK
 ignore
 idle
 init
+brktest
+delaytest
+forktest*

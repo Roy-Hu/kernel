@@ -1,3 +1,6 @@
+#ifndef TRAP_H_
+#define TRAP_H_
+
 #include <comp421/hardware.h>
 
 typedef void (*TrapHandlerPtr)(ExceptionInfo *);
@@ -18,3 +21,5 @@ void TrapMathHandler(ExceptionInfo *);
 void TrapTtyReceiveHandler(ExceptionInfo *);
 
 void TrapTtyTransmitHandler(ExceptionInfo *);
+
+#endif
