@@ -132,7 +132,7 @@ SavedContext *switch_fork(SavedContext *ctxp, void *p1, void *p2) {
 
     memcpy(pcb1->ctx,ctxp,sizeof(SavedContext));
     pushPCB(pcb2);
-    return pcb1->ctx;
+    return pcb2->ctx;
 }
 
 
