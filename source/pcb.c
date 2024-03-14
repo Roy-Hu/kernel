@@ -120,15 +120,27 @@ SavedContext *switch_fork(SavedContext *ctxp, void *p1, void *p2) {
     for (i = 0; i < PAGE_TABLE_LEN; ++i) {
         if (pcb2->ptr0[i].valid == 1) {
             setPTE(&pcb1->ptr0[brk_vpn], pcb2->ptr0[i].pfn, 1, PROT_NONE, (PROT_READ | PROT_WRITE));
+            WriteRegister(REG_TLB_FLUSH, (RCS421RegVal)(brk_vpn<<PAGESHIFT));
             memcpy((void*)(brk_vpn<<PAGESHIFT), (void*)(i<<PAGESHIFT), PAGESIZE);
-            TracePrintf(LOG, "Mem copy setup successfully!\n");
-            WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
+            //TracePrintf(LOG, "Mem copy setup successfully!\n");
+          
         }
         pcb1->ptr0[brk_vpn].valid = 0;
+        WriteRegister(REG_TLB_FLUSH, (RCS421RegVal)(brk_vpn<<PAGESHIFT));
     }
     TracePrintf(LOG, "finished copying content of the memory!\n");
 
-    pushPCB(pcb2);
+    unsigned long vpn = DOWN_TO_PAGE((void *)pcb2->ptr0 - VMEM_1_BASE) >> PAGESHIFT;
+    unsigned long paddr = (ptr1[vpn].pfn << PAGESHIFT) | (((int)pcb2->ptr0)&PAGEOFFSET);
+
+    WriteRegister(REG_PTR0, (RCS421RegVal)paddr);
+    WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
+
+    memcpy(pcb2->ctx, pcb1->ctx, sizeof(SavedContext));
+    pcb1->state=READY;
+
+    pushPCB(pcb1);
+    runningPCB=pcb2;
     return pcb2->ctx;
 }
 

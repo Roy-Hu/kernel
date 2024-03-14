@@ -15,7 +15,7 @@ int Fork(void) {
     PCB* child = (PCB*)malloc(sizeof(PCB));
     child->ctx = (SavedContext*)malloc(sizeof(SavedContext));
     child->parent = runningPCB;
-    child->state = READY;
+    child->state = RUNNING;
     child->pid = processId;
     processId++;
     child->ptr0 = allocateNewPage();
@@ -24,7 +24,7 @@ int Fork(void) {
     child->readyTime = clocktime;
     child->next = NULL;
     child->brk = runningPCB->brk;
-    ContextSwitch(switch_fork,child->ctx, (void*)runningPCB, (void*) child);
+    ContextSwitch(switch_fork,runningPCB->ctx, (void*)runningPCB, (void*) child);
     if (runningPCB == child) return 0;
     else return child->pid;
 
@@ -35,6 +35,7 @@ int Exec(char *filename, char **argvec) {
 }
 
 void Exit(int status) {
+    return;
 }
 
 int Wait(int *status_ptr) {
