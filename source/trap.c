@@ -98,7 +98,7 @@ void TrapMemoryHandler(ExceptionInfo *info) {
         }
     }
     else {
-        TracePrintf(LOG, "unassigned memory on addr vpn: %d\n", tar_vpn);
+        TracePrintf(LOG, "unassigned memory on addr vpn: %d\t virtual addr: %d\n", tar_vpn,(unsigned long) addr);
         return Halt();
     }
     // Halt();

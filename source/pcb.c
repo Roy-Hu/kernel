@@ -106,9 +106,10 @@ SavedContext *switch_fork(SavedContext *ctxp, void *p1, void *p2) {
     /*need to check for enough memory first*/
     /*copy pet from parent to child*/
     for (;i < PAGE_TABLE_LEN; ++i) {
+        pcb2->ptr0[i].valid = 0;
         if (pcb1->ptr0[i].valid == 1) {
             int pfn = getFreePhysicalFrame();
-            setPTE(&pcb2->ptr0[i], pfn, pcb1->ptr0[i].valid, pcb1->ptr0[i].uprot, pcb1->ptr0[i].kprot);
+            setPTE(&pcb2->ptr0[i], pfn,1, pcb1->ptr0[i].uprot, pcb1->ptr0[i].kprot);
             TracePrintf(LOG, "set new pte for pcb2: %d\n", i);
         }
     }
