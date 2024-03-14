@@ -34,7 +34,7 @@ void TrapKernelHandler(ExceptionInfo *info) {
         info->regs[0] = Brk((void*)(info->regs[1]));
         break;
     case YALNIX_DELAY:  
-        Delay(info->regs[1]);
+        info->regs[0] = Delay(info->regs[1]);
         break;
     case YALNIX_TTY_READ:
         /*code*/
@@ -84,7 +84,24 @@ void TrapIllegalHandler(ExceptionInfo *info) {
 
 void TrapMemoryHandler(ExceptionInfo *info) {
     TracePrintf(LOG, "TrapMemoryHandler\n");
-    Halt();
+    void* addr = info->addr;
+    unsigned long brk_vpn = UP_TO_PAGE(runningPCB->brk) >> PAGESHIFT;
+    unsigned long tar_vpn = UP_TO_PAGE(addr) >> PAGESHIFT;
+    int stk_bound_vpn = user_stack_vpn();
+    /*address to acquire exceed user stack*/
+    //if (tar_vpn >= stk_bound_vpn) return ERROR;
+    if (tar_vpn > brk_vpn && (stk_bound_vpn - brk_vpn) < physicalFrames.freePFN && tar_vpn <= stk_bound_vpn) {
+        int i = tar_vpn;
+        for (;i <= stk_bound_vpn; ++i) {
+            int pfn = getFreePhysicalFrame();
+            setPTE(&runningPCB->ptr0[i], pfn, 1, (PROT_READ|PROT_WRITE), (PROT_READ|PROT_WRITE));
+        }
+    }
+    else {
+        TracePrintf(LOG, "unassigned memory on addr vpn: %d\n", tar_vpn);
+        return Halt();
+    }
+    // Halt();
 }
 
 void TrapMathHandler(ExceptionInfo *info) {

@@ -104,3 +104,15 @@ int check_enough_pages_fork() {
     int freepage = physicalFrames.freePFN;
     return (freepage>=count);
 }
+
+/**
+ * return value: user stack boundary address
+*/
+int user_stack_vpn() {
+    int i = UP_TO_PAGE(USER_STACK_LIMIT) >> PAGESHIFT;
+    int brk = UP_TO_PAGE(runningPCB->brk) >> PAGESHIFT;
+    for (; i > brk; --i) {
+        if (runningPCB->ptr0[i].valid != 1) break;
+    }
+    return i;
+}

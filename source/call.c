@@ -24,7 +24,6 @@ int Fork(void) {
     child->readyTime = clocktime;
     child->next = NULL;
     child->brk = runningPCB->brk;
-    child->parent = runningPCB;
     ContextSwitch(switch_fork,child->ctx, (void*)runningPCB, (void*) child);
     if (runningPCB == child) return 0;
     else return child->pid;
@@ -95,7 +94,7 @@ int Delay (int clock_ticks) {
         TracePrintf(LOG, "Switch to idle\n");
         ContextSwitch(switch_func, runningPCB->ctx, (void *)runningPCB, (void *)idlePCB);
     } else {
-
+        TracePrintf(LOG, "Switch to Process pid: %d\n", readyPCB->pid);
         ContextSwitch(switch_func, runningPCB->ctx, (void *)runningPCB, (void *)popPCB(READY));
     }
 

@@ -44,6 +44,8 @@ int getFreePhysicalFrame();
 
 int check_enough_pages_fork();
 
+int user_stack_vpn();
+
 PTE* allocateNewPage();
 
 void setPTE(struct pte *entry, int pfn, int valid, int uprot, int kprot);

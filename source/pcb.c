@@ -74,6 +74,7 @@ SavedContext *switch_func(SavedContext *ctxp, void *p1, void *p2) {
  *if it is idle, just continuing executing p1
  */
 SavedContext *switch_clock_trap(SavedContext *ctxp, void *p1, void *p2) {
+    TracePrintf(LOG, "Switch Clock Trap\n");
     PCB *pcb1 = (PCB *)p1;
     PCB *pcb2 = (PCB *)p2;
     if (pcb2 == NULL) return pcb1->ctx;
@@ -101,7 +102,8 @@ SavedContext *switch_fork(SavedContext *ctxp, void *p1, void *p2) {
     PCB *pcb1 = (PCB *)p1;
     PCB *pcb2 = (PCB *)p2;
     int i = 0;
-    TracePrintf(LOG, "Enter Fork Call!\n");
+    TracePrintf(LOG, "Enter Fork Context Switch Call!\n");
+    /*need to check for enough memory first*/
     /*copy pet from parent to child*/
     for (;i < PAGE_TABLE_LEN; ++i) {
         if (pcb1->ptr0[i].valid == 1) {
@@ -123,14 +125,8 @@ SavedContext *switch_fork(SavedContext *ctxp, void *p1, void *p2) {
         }
         pcb1->ptr0[brk_vpn].valid = 0;
     }
-    //ptr1[brk_vpn].valid = 0;
     TracePrintf(LOG, "finished copying content of the memory!\n");
-    // unsigned long vpn = DOWN_TO_PAGE((void *)pcb2->ptr0 - VMEM_1_BASE) >> PAGESHIFT;
-    // unsigned long paddr = (ptr1[vpn].pfn << PAGESHIFT) | (((int)pcb2->ptr0)&PAGEOFFSET);
-    // WriteRegister(REG_PTR0,(RCS421RegVal)paddr);
-    // WriteRegister(REG_TLB_FLUSH,TLB_FLUSH_0);
 
-    memcpy(pcb1->ctx,ctxp,sizeof(SavedContext));
     pushPCB(pcb2);
     return pcb2->ctx;
 }
