@@ -120,7 +120,7 @@ SavedContext *switch_fork(SavedContext *ctxp, void *p1, void *p2) {
         if (pcb2->ptr0[i].valid == 1) {
             setPTE(&pcb1->ptr0[brk_vpn], pcb2->ptr0[i].pfn, 1, PROT_NONE, (PROT_READ | PROT_WRITE));
             memcpy((void*)(brk_vpn<<PAGESHIFT), (void*)(i<<PAGESHIFT), PAGESIZE);
-            TracePrintf(LOG, "mem copy setup successfully!\n");
+            TracePrintf(LOG, "Mem copy setup successfully!\n");
             WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
         }
         pcb1->ptr0[brk_vpn].valid = 0;
