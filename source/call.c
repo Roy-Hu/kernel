@@ -20,7 +20,7 @@ int Fork(void) {
     processId++;
     child->ptr0 = allocateNewPage();
     TracePrintf(LOG, "allocated new address for child in ptr0: %p!\n", child->ptr0);
-    TracePrintf(LOG, "Current ptr0: %p!\n", runningPCB->ptr0);
+    TracePrintf(LOG, "RunningPCB ptr0: %x!\n", runningPCB->ptr0);
     child->readyTime = clocktime;
     child->next = NULL;
     child->brk = runningPCB->brk;

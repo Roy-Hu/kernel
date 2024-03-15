@@ -86,19 +86,21 @@ void TrapMemoryHandler(ExceptionInfo *info) {
     TracePrintf(LOG, "TrapMemoryHandler\n");
     void* addr = info->addr;
     unsigned long brk_vpn = UP_TO_PAGE(runningPCB->brk) >> PAGESHIFT;
-    unsigned long tar_vpn = UP_TO_PAGE(addr) >> PAGESHIFT;
+    unsigned long tar_vpn = DOWN_TO_PAGE(addr) >> PAGESHIFT;
     int stk_bound_vpn = user_stack_vpn();
     /*address to acquire exceed user stack*/
     //if (tar_vpn >= stk_bound_vpn) return ERROR;
     if (tar_vpn > brk_vpn && (stk_bound_vpn - brk_vpn) < physicalFrames.freePFN && tar_vpn <= stk_bound_vpn) {
         int i = tar_vpn;
+        TracePrintf(LOG, "Set user_stack vpn from: %d to %d\n",stk_bound_vpn, tar_vpn);
         for (;i <= stk_bound_vpn; ++i) {
             int pfn = getFreePhysicalFrame();
             setPTE(&runningPCB->ptr0[i], pfn, 1, (PROT_READ|PROT_WRITE), (PROT_READ|PROT_WRITE));
         }
     }
     else {
-        TracePrintf(LOG, "unassigned memory on addr vpn: %d\t virtual addr: %d\n", tar_vpn,(unsigned long) addr);
+        TracePrintf(LOG, "ptr_0 is: %p\n", runningPCB->ptr0);
+        TracePrintf(LOG, "unassigned memory on addr vpn: %d\t stack pointer addr: %d\n", tar_vpn,stk_bound_vpn);
         return Halt();
     }
     // Halt();
