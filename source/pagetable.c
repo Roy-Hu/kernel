@@ -8,10 +8,7 @@ int totalPhysicalFrameNum;
 PhysicalFrame physicalFrames;
 
 PTE *ptr0, ptr1[PAGE_TABLE_LEN];
-page_table0 *head_ptr0;
-
-
-
+PageTable0 *head_ptr0;
 
 void *kernelBreak;
 
@@ -22,45 +19,52 @@ void freePhysicalFrame(int pfn) {
 
 /*return the starting address of the new ptr0*/
 PTE* allocateNewPage() {
-    struct page_table0* curr = head_ptr0;
-    TracePrintf(LOG, "Enter else if INIT 2\n");
-   
+    PageTable0 *curr = head_ptr0;
+    TracePrintf(TRC, "Enter else if INIT 2\n");
 
+    // find the last page_table0
     while (curr != NULL) {
         /*empty space found, do not allocate new space*/
+        // it seems is_full will never be 0?
         if (curr->is_full == 0) {
             curr->is_full = 1;
             int pfn = getFreePhysicalFrame();
+            
             int vpn = ((unsigned long)(curr->start_addr) - VMEM_1_BASE) >> PAGESHIFT;
             /*set the kernel pagetable*/
             setPTE(&ptr1[vpn], pfn, 1, PROT_NONE, (PROT_READ | PROT_WRITE));
-            TracePrintf(LOG, "Return from ALlocate pte\n");
+            TracePrintf(TRC, "Return from Allocate pte\n");
+
             return curr->start_addr;
         }
-        if (curr->nextPage != NULL)
-            curr = curr->nextPage;
+ 
+        if (curr->nextPage != NULL) curr = curr->nextPage;
         else break;  
     }
-    TracePrintf(LOG, "Enter else if INIT\n");
+    TracePrintf(TRC, "Enter else if INIT\n");
 
      /*no empty space, allocate new pt0*/
-    struct page_table0* new_pt0 = malloc(sizeof(struct page_table0));
+    PageTable0 *new_pt0 = malloc(sizeof(PageTable0));
 
     // TracePrintf(TRC, "currptr0%p\n",curr->start_addr);
 
-    /*new virtual address of the r0 pt*/
-    new_pt0->start_addr =(PTE*)(curr->start_addr - PAGESIZE);
-    TracePrintf(LOG, "new address succeed\n");
+    /*new virtual address of the ptr0*/
+    new_pt0->start_addr =(PTE *)(curr->start_addr - PAGESIZE);
+    // TracePrintf(LOG, "new address succeed\n");
     new_pt0->is_full = 1;
     new_pt0->nextPage = NULL;
 
     int pfn = getFreePhysicalFrame();
-   
+    if (pfn == -1) {
+        return NULL;
+    } 
+
     int vpn = ((unsigned long)(new_pt0->start_addr) - VMEM_1_BASE) >> PAGESHIFT;
     /*set the kernel pagetable*/
     setPTE(&ptr1[vpn], pfn, 1, PROT_NONE, (PROT_READ | PROT_WRITE));
 
     curr->nextPage = new_pt0;
+
     return new_pt0->start_addr;
 }
 
@@ -94,15 +98,16 @@ void setPTE(PTE *entry, int pfn, int valid, int uprot, int kprot) {
  * 
 */
 int check_enough_pages_fork() {
-    int i = 0;
+    int i;
     int count = 0;
-    for (; i < PAGE_TABLE_LEN; ++i) {
-        if (runningPCB->ptr0[i].valid == 1) {
-            count++;
-        }
+
+    for (i = 0; i < PAGE_TABLE_LEN; ++i) {
+        if (runningPCB->ptr0[i].valid == 1) count++;
     }
+
     int freepage = physicalFrames.freePFN;
-    return (freepage>=count);
+
+    return (freepage >= count);
 }
 
 /**
@@ -110,10 +115,13 @@ int check_enough_pages_fork() {
 */
 int user_stack_vpn() {
     int i = (DOWN_TO_PAGE(USER_STACK_LIMIT) >> PAGESHIFT) - 1;
+
     TracePrintf(LOG, "User stack limit: %d\n", i);
     int brk = UP_TO_PAGE(runningPCB->brk) >> PAGESHIFT;
+
     for (; i > brk; --i) {
         if (runningPCB->ptr0[i].valid != 1) break;
     }
+
     return i;
 }

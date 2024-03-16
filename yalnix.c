@@ -36,7 +36,7 @@
 void KernelStart(ExceptionInfo *info, unsigned int pmem_size, 
 	void *orig_brk, char **cmd_args) {
 	
-	void *newBrk;
+	// void *newBrk;
 
 	totalPhysicalFrameNum = DOWN_TO_PAGE(pmem_size) >> PAGESHIFT;
 
@@ -75,11 +75,12 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size,
 
     /*switch to init*/
     ContextSwitch(test_init, runningPCB->ctx, runningPCB, initPCB);
-    TracePrintf(LOG, "Arrived Here\n");
-    if(runningPCB->pid==IDLE_PID)
+    TracePrintf(INF, "ContextSwitch to Init\n");
+
+    if(runningPCB->pid == IDLE_PID)
         LoadProgram("idle",cmd_args, info);
-    else if(runningPCB->pid==INIT_PID) {
-        if (cmd_args==NULL || cmd_args[0]==NULL) 
+    else if(runningPCB->pid == INIT_PID) {
+        if (cmd_args == NULL || cmd_args[0] == NULL) 
             LoadProgram("init",cmd_args,info);
         else 
             LoadProgram(cmd_args[0],cmd_args, info);

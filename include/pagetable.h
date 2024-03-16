@@ -22,9 +22,14 @@ extern void *kernelBreak;
 /*keeping track of the base address of the pagetable and its availability*/
 typedef struct page_table0 {
     int is_full;
+
+    // start virtual address of the page table 0
+    // The start_addr will be VMEM_1_LIMIT - PAGESIZE, for the following page tables, 
+    // it will be the start_addr - PAGESIZE
     void* start_addr;
+    
     struct page_table0 *nextPage;
-} page_table0;
+} PageTable0;
 
 typedef struct physicalFrame {
     int totalPFN;
@@ -36,7 +41,7 @@ extern int totalPhysicalFrameNum;
 
 extern PhysicalFrame physicalFrames;
 
-extern page_table0 *head_ptr0;
+extern PageTable0 *head_ptr0;
 
 void freePhysicalFrame(int pfn);
 

@@ -52,29 +52,29 @@ void TrapKernelHandler(ExceptionInfo *info) {
 void TrapClockHandler(ExceptionInfo *info) {
     TracePrintf(LOG, "TrapClockHandler\n");
     clocktime++;
-    bool flag = false;
-    TracePrintf(LOG, "previous \n");
+    // bool flag = false;
+    TracePrintf(TRC, "previous \n");
 
     /*There are waiting processes, push the waiting process to ready if reached
       time */
     if (waitingPCB != NULL) {
-        TracePrintf(LOG, "Enter first if\n");
+        TracePrintf(TRC, "Enter first if\n");
         while (waitingPCB != NULL && waitingPCB->readyTime <= clocktime) {
-            flag = true;
+            // flag = true;
             PCB *pcb = popPCB(WAITING);
             pcb->state = READY;
             pushPCB(pcb);
         }
-
     }
-    TracePrintf(LOG, "Exit first if\n");
+
+    // TracePrintf(LOG, "Exit first if\n");
     // if (runningPCB == idlePCB && flag) {
     //     TracePrintf(LOG, "Enter second if\n");
-    PCB *p = popPCB(READY);
-    // No ready PCB as for now
-    if (p != NULL)
-        TracePrintf(LOG, "Popped PCB pid: %d\n", p->pid);
-    ContextSwitch(switch_clock_trap, runningPCB->ctx, (void *)runningPCB, p);
+    PCB *ready = popPCB(READY);
+
+    if (ready != NULL) TracePrintf(LOG, "Wake PCB pid: %d\n", ready->pid);
+        
+    ContextSwitch(switch_clock_trap, runningPCB->ctx, (void *)runningPCB, ready);
 }
 
 void TrapIllegalHandler(ExceptionInfo *info) {
@@ -85,22 +85,29 @@ void TrapIllegalHandler(ExceptionInfo *info) {
 void TrapMemoryHandler(ExceptionInfo *info) {
     TracePrintf(LOG, "TrapMemoryHandler\n");
     void* addr = info->addr;
+
     unsigned long brk_vpn = UP_TO_PAGE(runningPCB->brk) >> PAGESHIFT;
-    unsigned long tar_vpn = DOWN_TO_PAGE(addr) >> PAGESHIFT;
+    unsigned long trap_vpn = DOWN_TO_PAGE(addr) >> PAGESHIFT;
     int stk_bound_vpn = user_stack_vpn();
+
     /*address to acquire exceed user stack*/
-    //if (tar_vpn >= stk_bound_vpn) return ERROR;
-    if (tar_vpn > brk_vpn && (stk_bound_vpn - brk_vpn) < physicalFrames.freePFN && tar_vpn <= stk_bound_vpn) {
-        int i = tar_vpn;
-        TracePrintf(LOG, "Set user_stack vpn from: %d to %d\n",stk_bound_vpn, tar_vpn);
+    //if (trap_vpn >= stk_bound_vpn) return ERROR;
+    // why stk_bound_vpn - brk_vpn? isn't it stk_bound_vpn - trap_vpn?
+    if (trap_vpn > brk_vpn && (stk_bound_vpn - brk_vpn) < physicalFrames.freePFN && trap_vpn <= stk_bound_vpn) {
+        int i = trap_vpn;
+        TracePrintf(LOG, "Set user_stack vpn from: %d to %d\n",stk_bound_vpn, trap_vpn);
         for (;i <= stk_bound_vpn; ++i) {
             int pfn = getFreePhysicalFrame();
-            setPTE(&runningPCB->ptr0[i], pfn, 1, (PROT_READ|PROT_WRITE), (PROT_READ|PROT_WRITE));
+            if (pfn == -1) {
+                return Halt();
+            }
+
+            setPTE(&runningPCB->ptr0[i], pfn, 1, (PROT_READ | PROT_WRITE), (PROT_READ | PROT_WRITE));
         }
-    }
-    else {
+    } else {
         TracePrintf(LOG, "ptr_0 is: %p\n", runningPCB->ptr0);
-        TracePrintf(LOG, "unassigned memory on addr vpn: %d\t stack pointer addr: %d\n", tar_vpn,stk_bound_vpn);
+        TracePrintf(LOG, "unassigned memory on addr vpn: %d\t stack pointer addr: %d\n", trap_vpn, stk_bound_vpn);
+
         return Halt();
     }
     // Halt();

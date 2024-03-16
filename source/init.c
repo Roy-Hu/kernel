@@ -67,8 +67,9 @@ void initPageTable() {
     // page table you are setting up.
 
     /*Init ptr0*/
-    head_ptr0 = malloc(sizeof(struct page_table0));
     ptr0 = (PTE *)(VMEM_1_LIMIT - PAGESIZE);
+
+    head_ptr0 = malloc(sizeof(PageTable0));
     head_ptr0->is_full = 1;
     head_ptr0->start_addr = ptr0;
     head_ptr0->nextPage = NULL;
@@ -84,11 +85,8 @@ void initPageTable() {
     // for (i = 0; i < PAGE_TABLE_LEN; i++) setPTE(&ptr0[i], -1, 0, PROT_NONE, PROT_NONE);
 
     // Kernel stack from r0
-    int adr;
-
-    for (i = KERNEL_STACK_BASE; i < KERNEL_STACK_LIMIT; i+=PAGESIZE) {
-        adr = i  >> PAGESHIFT;
-        setPTE(&ptr0[adr], i>>PAGESHIFT, 1, PROT_NONE, (PROT_READ | PROT_WRITE));
+    for (i = KERNEL_STACK_BASE; i < KERNEL_STACK_LIMIT; i += PAGESIZE) {
+        setPTE(&ptr0[i >> PAGESHIFT], i>>PAGESHIFT, 1, PROT_NONE, (PROT_READ | PROT_WRITE));
     }
 
     for (i = 0; i < UP_TO_PAGE(kernelBreak - VMEM_1_BASE) >> PAGESHIFT; i++) {
