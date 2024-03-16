@@ -8,6 +8,7 @@
 #include "pcb.h"
 #include "pagetable.h"
 #include "global.h"
+#include "call.h"
 
 int Fork(void) {
     // not enough physical pages for child process
@@ -35,7 +36,61 @@ int Fork(void) {
     else return child->pid;
 }
 
-int Exec(char *filename, char **argvec) {
+int MyExec(char *filename, char **argvec, ExceptionInfo *info) {
+    TracePrintf(LOG, "PID %d call Exec\n", runningPCB->pid);
+    
+    unsigned long vpn = (unsigned long)filename >> PAGESHIFT;
+    int eof = 0;
+    int i;
+
+    // check if filename is valid in pt
+    while (eof == 0) {
+        if (runningPCB->ptr0[vpn].valid == 0 || !(runningPCB->ptr0[vpn].kprot & PROT_READ)) {
+            TracePrintf(ERR, "Invalid filename\n");
+            return ERROR;
+        }
+
+        // check if filename is null-terminated
+        for (i = 0; i < ((vpn + 1) << PAGESHIFT) - (unsigned long)filename; i++) {
+            if (filename[i] == '\0') {
+                eof = 1;
+                break;
+            }
+        }
+
+        // filename continues to next page
+        vpn++;
+    }
+
+    // check if argvec is valid in pt
+    vpn = (unsigned long)argvec >> PAGESHIFT;
+    eof = 0;
+
+    while (eof == 0) {
+        if (runningPCB->ptr0[vpn].valid == 0 || !(runningPCB->ptr0[vpn].kprot & PROT_READ)) {
+            TracePrintf(ERR, "Invalid argvec\n");
+            return ERROR;
+        }
+
+        // check if argvec[i] is NULL
+        for (i = 0; i * sizeof(char*) < ((vpn + 1) << PAGESHIFT) - (unsigned long)argvec; i++) {
+            if (argvec[i] == NULL) {
+                eof = 1;
+                break;
+            }
+        }
+        // argvec continues to next page
+        vpn++;
+    }
+
+    TracePrintf(LOG, "Exec filename: %s\n", filename);
+    int status = LoadProgram(filename, argvec, info);
+
+    if (status != 0) {
+        TracePrintf(ERR, "LoadProgram failed\n");
+        return ERROR;
+    }
+    
     return 0;
 }
 

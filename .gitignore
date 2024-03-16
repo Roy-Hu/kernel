@@ -11,6 +11,7 @@ DISK
 ignore
 idle
 init
-brktest
-delaytest
+brktest*
+delaytest*
 forktest*
+exectest*

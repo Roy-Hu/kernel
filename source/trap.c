@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include <comp421/yalnix.h>
 
+#include "call.h"
 #include "trap.h"
 #include "pcb.h"
 #include "global.h"
@@ -17,7 +18,7 @@ void TrapKernelHandler(ExceptionInfo *info) {
         info->regs[0] = Fork();
         break;
     case YALNIX_EXEC:
-        /* code */
+        MyExec((char *)info->regs[1], (char **)info->regs[2], info);
         break;
     case YALNIX_EXIT:
         /* code */

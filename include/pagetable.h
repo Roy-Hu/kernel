@@ -1,7 +1,6 @@
 #ifndef PAGETABLE_H_
 #define PAGETABLE_H_
 
-
 #include <comp421/hardware.h>
 
 #define INIT_PT0_PFN (2 * PAGE_TABLE_LEN - 1)
