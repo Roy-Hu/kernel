@@ -18,6 +18,12 @@ int Fork(void) {
     child->ctx = (SavedContext*)malloc(sizeof(SavedContext));
 
     child->parent = runningPCB;
+
+    if (runningPCB->child == NULL) runningPCB->child = child;
+    else addSibling(runningPCB->child, child);
+
+    runningPCB->childNum++;
+
     child->state = RUNNING;
     child->pid = processId++;
     child->ptr0 = allocateNewPage();
@@ -95,11 +101,48 @@ int MyExec(char *filename, char **argvec, ExceptionInfo *info) {
 }
 
 void Exit(int status) {
-    return;
+    TracePrintf(LOG, "PID %d call Exit\n", runningPCB->pid);
+
+    terminateProcess(runningPCB, status);
+
+    ContextSwitch(switch_func, runningPCB->ctx, (void *)runningPCB, (void *)popPCB(READY));
+
+    while(1){}
 }
 
 int Wait(int *status_ptr) {
-    return 0;
+    TracePrintf(LOG, "PID %d call Wait\n", runningPCB->pid);
+
+    unsigned long vpn = (unsigned long)((void *)status_ptr + sizeof(int)) >> PAGESHIFT;
+    
+    int i;
+
+    // Check if status_ptr is valid in pt
+    for (i = vpn; i < (UP_TO_PAGE((unsigned long)status_ptr) >> PAGESHIFT); i++) {
+        if (runningPCB->ptr0[i].valid == 0 || !(runningPCB->ptr0[i].kprot & PROT_WRITE)) {
+            TracePrintf(ERR, "Invalid status_ptr\n");
+            return ERROR;
+        }
+    }
+    
+    if (runningPCB->childNum == 0) {
+        TracePrintf(ERR, "No children to wait for\n");
+        return ERROR;
+    }
+
+    if (runningPCB->exitChild == NULL) {
+        runningPCB->state = WAITCHILD;
+        ContextSwitch(switch_func, runningPCB->ctx, (void *)runningPCB, (void *)(READY));
+    }
+
+    exitChildStatus *exitChild = popExitStatus(runningPCB);
+
+    *status_ptr = exitChild->status;
+    int pid = exitChild->pid;
+
+    free(exitChild);
+
+    return pid;
 }
 
 int GetPid(void) {

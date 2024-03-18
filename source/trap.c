@@ -85,7 +85,7 @@ void TrapIllegalHandler(ExceptionInfo *info) {
 
 void TrapMemoryHandler(ExceptionInfo *info) {
     TracePrintf(LOG, "TrapMemoryHandler\n");
-    void* addr = info->addr;
+    void *addr = info->addr;
 
     unsigned long brk_vpn = UP_TO_PAGE(runningPCB->brk) >> PAGESHIFT;
     unsigned long trap_vpn = DOWN_TO_PAGE(addr) >> PAGESHIFT;
@@ -106,8 +106,30 @@ void TrapMemoryHandler(ExceptionInfo *info) {
             setPTE(&runningPCB->ptr0[i], pfn, 1, (PROT_READ | PROT_WRITE), (PROT_READ | PROT_WRITE));
         }
     } else {
+        switch (info->code)
+        {
+        case TRAP_MEMORY_MAPERR:
+            TracePrintf(LOG, "TRAP_MEMORY_MAPERR: No mapping at addr %p\n", info->addr);
+            break;
+        case TRAP_MEMORY_ACCERR:
+            TracePrintf(LOG, "TRAP_MEMORY_ACCERR: Protection violation at addr %p\n", info->addr);
+            break;
+        case TRAP_MEMORY_KERNEL:
+            TracePrintf(LOG, "TRAP_MEMORY_KERNEL: Linux kernel sent SIGSEGV at addr %p\n", info->addr);
+            break;
+        case TRAP_MEMORY_USER:
+            TracePrintf(LOG, "TRAP_MEMORY_USER: Received SIGSEGV from user %p\n", info->addr);
+            break;
+        default:
+            break;
+        }
+
         TracePrintf(LOG, "ptr_0 is: %p\n", runningPCB->ptr0);
-        TracePrintf(LOG, "unassigned memory on addr vpn: %d\t stack pointer addr: %d\n", trap_vpn, stk_bound_vpn);
+        TracePrintf(LOG, "unassigned memory on addr vpn: %d\n", trap_vpn);
+        TracePrintf(LOG, "stack pointer addr: %d\n",stk_bound_vpn);
+        TracePrintf(LOG, "brk addr %p, brk vpn %d\n", runningPCB->brk, brk_vpn);
+
+        // Exit(ERROR);
 
         return Halt();
     }

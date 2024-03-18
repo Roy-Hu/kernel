@@ -6,6 +6,7 @@
 
 typedef enum {
   WAITING,
+  WAITCHILD,
   RUNNING,
   READY,
   TERMINATED
@@ -13,6 +14,12 @@ typedef enum {
 
 #define IDLE_PID 0
 #define INIT_PID 1
+
+typedef struct exitChildStatus {
+    int pid;
+    int status;
+    struct exitChildStatus *next;
+} exitChildStatus;
 
 typedef struct pcb {
     int pid;
@@ -26,6 +33,14 @@ typedef struct pcb {
     int brk;
 
     struct pcb *parent;
+    
+    struct pcb *child;
+
+    struct pcb *sibling;
+
+    int childNum;
+
+    exitChildStatus *exitChild;
 
     int stackTop;
 
@@ -47,6 +62,16 @@ extern PCB *readyPCBTail, *waitingPCBTail;
 extern PCB *runningPCB, *waitingPCB, *readyPCB, *idlePCB, *initPCB;
 
 PCB *createPCB(int pid);
+
+void addSibling(PCB *parent, PCB *sibling);
+
+void removeSibling(PCB *parent, PCB *child);
+
+void pushExitStatus(PCB *pcb, int pid, int status);
+
+exitChildStatus *popExitStatus(PCB *pcb);
+
+void freeExitStatus(PCB *pcb);
 
 void pushPCB(PCB *pcb);
 

@@ -10,6 +10,34 @@ PCB *readyPCBTail, *waitingPCBTail;
 
 char swapBuff[PAGESIZE * KERNEL_STACK_PAGES];
 
+void terminateProcess(PCB *pcb, int status) {
+    TracePrintf(LOG, "Terminate Process %d\n", pcb->pid);
+    pcb->state = TERMINATED;
+
+    if (pcb->parent != NULL) {
+        pushExitStatus(pcb->parent, pcb->pid, status);
+        pcb->parent->childNum--;
+
+        removeSibling(pcb->parent, pcb);
+
+        if (pcb->parent->state == WAITCHILD) {
+            pcb->parent->state = READY;
+            pushPCB(pcb->parent);
+        }
+
+        pcb->parent = NULL;
+    }
+
+    // remove parent from all child and sibling
+    if (pcb->child != NULL) {
+        PCB *cur = pcb->child;
+        while (cur != NULL) {
+            cur->parent = NULL;
+            cur = cur->sibling;
+        }
+    }
+}
+
 SavedContext *test_init(SavedContext *ctxp, void *p1, void *p2) {
     PCB *pcb1 = (PCB *)p1;
     PCB *pcb2 = (PCB *)p2;
@@ -44,6 +72,21 @@ SavedContext *switch_func(SavedContext *ctxp, void *p1, void *p2) {
     PCB *pcb1 = (PCB *)p1;
     PCB *pcb2 = (PCB *)p2;
     
+    if (pcb1->state == TERMINATED) {
+        TracePrintf(LOG, "Process %d is terminated\n", pcb1->pid);
+        int i;
+        for (i = MEM_INVALID_PAGES; i < PAGE_TABLE_LEN; i++) {
+            if (pcb1->ptr0[i].valid) {
+                freePhysicalFrame(pcb1->ptr0[i].pfn);
+            }
+        }
+
+        freeExitStatus(pcb1);
+        free(pcb1->ptr0);
+        free(pcb1->ctx);
+        free(pcb1);
+    }
+
     if (pcb2 == NULL) {
         /*Switch to idle*/
         unsigned long vpn = DOWN_TO_PAGE((void *)idlePCB->ptr0 - VMEM_1_BASE) >> PAGESHIFT;
@@ -58,8 +101,7 @@ SavedContext *switch_func(SavedContext *ctxp, void *p1, void *p2) {
         TracePrintf(LOG, "Currently no readyPCB, Switch to Idle\n");
 
         return idlePCB->ctx;
-    }
-    else {
+    } else {
         TracePrintf(LOG, "Context Switch to %d Process!\n", pcb2->pid);
 
         unsigned long vpn = DOWN_TO_PAGE((void *)pcb2->ptr0 - VMEM_1_BASE) >> PAGESHIFT;
@@ -68,7 +110,7 @@ SavedContext *switch_func(SavedContext *ctxp, void *p1, void *p2) {
         WriteRegister(REG_PTR0,(RCS421RegVal)paddr);
         WriteRegister(REG_TLB_FLUSH,TLB_FLUSH_0);
 
-        runningPCB=pcb2;
+        runningPCB = pcb2;
         runningPCB->state = RUNNING;
 
         TracePrintf(TRC, "Return from switch_func\n");
@@ -101,7 +143,7 @@ SavedContext *switch_clock_trap(SavedContext *ctxp, void *p1, void *p2) {
 
     pcb1->state = READY;
 
-    if(pcb1 != idlePCB) pushPCB(pcb1);
+    if (pcb1 != idlePCB) pushPCB(pcb1);
 
     runningPCB=pcb2;
     
@@ -158,7 +200,7 @@ SavedContext *switch_fork(SavedContext *ctxp, void *p1, void *p2) {
     TracePrintf(LOG, "finished copying content of the memory!\n");
 
     unsigned long vpn = DOWN_TO_PAGE((void *)pcb2->ptr0 - VMEM_1_BASE) >> PAGESHIFT;
-    unsigned long paddr = (ptr1[vpn].pfn << PAGESHIFT) | (((int)pcb2->ptr0)&PAGEOFFSET);
+    unsigned long paddr = (ptr1[vpn].pfn << PAGESHIFT) | (((int)pcb2->ptr0) & PAGEOFFSET);
 
     WriteRegister(REG_PTR0, (RCS421RegVal)paddr);
     WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
@@ -167,7 +209,7 @@ SavedContext *switch_fork(SavedContext *ctxp, void *p1, void *p2) {
     pcb1->state=READY;
 
     pushPCB(pcb1);
-    runningPCB=pcb2;
+    runningPCB = pcb2;
     
     return pcb2->ctx;
 }
@@ -210,6 +252,65 @@ PCB *createPCB(int pid) {
     }
    
     return pcb;
+}
+
+void addSibling(PCB *parent, PCB *sibling) {
+    PCB *cur = parent->child;
+    while (cur->sibling != NULL) {
+        cur = cur->sibling;
+    }
+    cur->sibling = sibling;
+}
+
+void removeSibling(PCB *parent, PCB *child) {
+    PCB *cur = parent->child;
+    if (cur == child) {
+        parent->child = cur->sibling;
+        return;
+    }
+
+    while (cur->sibling != child) {
+        cur = cur->sibling;
+    }
+
+    cur->sibling = child->sibling;
+}
+
+void pushExitStatus(PCB *pcb, int pid, int status) {
+    exitChildStatus *newStatus = (exitChildStatus *)malloc(sizeof(exitChildStatus));
+    newStatus->pid = pid;
+    newStatus->status = status;
+    newStatus->next = NULL;
+
+    if (pcb->exitChild == NULL) {
+        pcb->exitChild = newStatus;
+    } else {
+        exitChildStatus *cur = pcb->exitChild;
+        while (cur->next != NULL) {
+            cur = cur->next;
+        }
+        cur->next = newStatus;
+    }
+}
+
+exitChildStatus *popExitStatus(PCB *pcb) {
+    if (pcb->exitChild == NULL) {
+        return NULL;
+    } else {
+        // remember to free the memory
+        exitChildStatus *cur = pcb->exitChild;
+        pcb->exitChild = cur->next;
+        return cur;
+    }
+}
+
+void freeExitStatus(PCB *pcb) {
+    exitChildStatus *cur = pcb->exitChild;
+    while (cur != NULL) {
+        exitChildStatus *next = cur->next;
+        free(cur);
+        cur = next;
+    }
 }
 
 void pushPCB(PCB *pcb) {
@@ -257,6 +358,7 @@ void pushPCB(PCB *pcb) {
 
         break;
     default:
+        TracePrintf(ERR, "Invalid state\n");
         break;
     }
 }

@@ -15,3 +15,5 @@ brktest*
 delaytest*
 forktest*
 exectest*
+forkwait*
+trapmemory*
