@@ -129,7 +129,7 @@ void TrapMemoryHandler(ExceptionInfo *info) {
         TracePrintf(LOG, "stack pointer addr: %d\n",stk_bound_vpn);
         TracePrintf(LOG, "brk addr %p, brk vpn %d\n", runningPCB->brk, brk_vpn);
 
-        // Exit(ERROR);
+        Exit(ERROR);
 
         return Halt();
     }

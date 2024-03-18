@@ -82,7 +82,9 @@ SavedContext *switch_func(SavedContext *ctxp, void *p1, void *p2) {
         }
 
         freeExitStatus(pcb1);
-        free(pcb1->ptr0);
+
+        // TODO: free pcb1->ptr0
+        // free(pcb1->ptr0);
         free(pcb1->ctx);
         free(pcb1);
     }
