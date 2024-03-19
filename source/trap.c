@@ -82,8 +82,52 @@ void TrapClockHandler(ExceptionInfo *info) {
 }
 
 void TrapIllegalHandler(ExceptionInfo *info) {
-    TracePrintf(LOG, "TrapIllegalHandler\n");
-    Halt();
+    switch(info->code) {
+        case TRAP_ILLEGAL_ILLOPC:
+            TracePrintf(LOG, "TRAP_ILLEGAL: Illegal opcode\n");
+            break;
+        case TRAP_ILLEGAL_ILLOPN:
+            TracePrintf(LOG, "TRAP_ILLEGAL: Illegal oprand\n");
+            break;
+        case TRAP_ILLEGAL_ILLADR:
+            TracePrintf(LOG, "TRAP_ILLEGAL: Illegal addressing mode\n");
+            break;
+        case TRAP_ILLEGAL_ILLTRP:
+            TracePrintf(LOG, "TRAP_ILLEGAL: Illegal software trap\n");
+            break;
+        case TRAP_ILLEGAL_PRVOPC:
+            TracePrintf(LOG, "TRAP_ILLEGAL: Privileged opcode\n");
+            break;
+        case TRAP_ILLEGAL_PRVREG:
+            TracePrintf(LOG, "TRAP_ILLEGAL: Privileged register\n");
+            break;
+        case TRAP_ILLEGAL_COPROC:
+            TracePrintf(LOG, "TRAP_ILLEGAL: Corpocessor error\n");
+            break;
+        case TRAP_ILLEGAL_BADSTK:
+            TracePrintf(LOG, "TRAP_ILLEGAL: Bad stack\n");
+            break;
+        case TRAP_ILLEGAL_KERNELI:
+            TracePrintf(LOG, "TRAP_ILLEGAL: Linux kernel sent SIGILL\n");
+            break;
+        case TRAP_ILLEGAL_USERIB:
+            TracePrintf(LOG, "TRAP_ILLEGAL: Received SIGILL or SIGBUS from user\n");
+            break;
+        case TRAP_ILLEGAL_ADRALN:
+            TracePrintf(LOG, "TRAP_ILLEGAL: Invalid address alignment\n");
+            break;
+        case TRAP_ILLEGAL_ADRERR:
+            TracePrintf(LOG, "TRAP_ILLEGAL: Non-existent physical address\n");
+            break;
+        case TRAP_ILLEGAL_OBJERR:
+            TracePrintf(LOG, "TRAP_ILLEGAL: Object-specific HW error\n");
+            break;
+        case TRAP_ILLEGAL_KERNELB:
+            TracePrintf(LOG, "TRAP_ILLEGAL: Linux kernel sent SIGBUS\n");
+            break;
+        default:
+            break;
+    }
 }
 
 void TrapMemoryHandler(ExceptionInfo *info) {
@@ -140,8 +184,37 @@ void TrapMemoryHandler(ExceptionInfo *info) {
 }
 
 void TrapMathHandler(ExceptionInfo *info) {
-    TracePrintf(LOG, "TrapMathHandler\n");
-    Halt();
+    switch (info->code) {
+        case TRAP_MATH_INTDIV:
+            TracePrintf(LOG, "TRAP_MATH: Integer divide by zero\n");
+            break;
+        case TRAP_MATH_INTOVF:
+            TracePrintf(LOG, "TRAP_MATH: Integer overflow\n");
+            break;
+        case TRAP_MATH_FLTDIV:
+            TracePrintf(LOG, "TRAP_MATH: Floating divide by zero\n");
+            break;
+        case TRAP_MATH_FLTUND:
+            TracePrintf(LOG, "TRAP_MATH: Floating underflow\n");
+            break;
+        case TRAP_MATH_FLTRES:
+            TracePrintf(LOG, "TRAP_MATH: Floating inexact result\n");
+            break;
+        case TRAP_MATH_FLTINV:
+            TracePrintf(LOG, "TRAP_MATH: Invalid floating operation\n");
+            break;
+        case TRAP_MATH_FLTSUB:
+            TracePrintf(LOG, "TRAP_MATH: FP subscript out of range\n");
+            break;
+        case TRAP_MATH_KERNEL:
+            TracePrintf(LOG, "TRAP_MATH: Linux Kernel SIGFPE\n");
+            break;
+        case TRAP_MATH_USER:
+            TracePrintf(LOG, "TRAP_MATH: Received SIGFPE from user\n");
+            break;
+        default:
+            break;
+    }
 }
 
 void TrapTtyReceiveHandler(ExceptionInfo *info) {
