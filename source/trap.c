@@ -15,27 +15,30 @@ void TrapKernelHandler(ExceptionInfo *info) {
     switch (info->code)
     {
     case YALNIX_FORK:
-        info->regs[0] = Fork();
+        info->regs[0] = MyFork();
         break;
     case YALNIX_EXEC:
         MyExec((char *)info->regs[1], (char **)info->regs[2], info);
         break;
     case YALNIX_EXIT:
-        /* code */
+        TracePrintf(LOG, "Exit %d\n", runningPCB->pid);
+        MyExit((int)info->regs[1]);
         break;
     case YALNIX_WAIT:
-        /* code */
+        TracePrintf(LOG, "Wait %d\n", runningPCB->pid);
+        info->regs[0] = MyWait((int *)info->regs[1]);
         break;
     case YALNIX_GETPID: 
-        info->regs[0] = GetPid();
+        info->regs[0] = MyGetPid();
         TracePrintf(LOG, "GetPid %d\n", runningPCB->pid);
         break;
     case YALNIX_BRK:
-        TracePrintf(LOG, "Trap\n");
-        info->regs[0] = Brk((void*)(info->regs[1]));
+        TracePrintf(LOG, "Brk\n");
+        info->regs[0] = MyBrk((void*)(info->regs[1]));
         break;
     case YALNIX_DELAY:  
-        info->regs[0] = Delay(info->regs[1]);
+        TracePrintf(LOG, "Delay\n");
+        info->regs[0] = MyDelay(info->regs[1]);
         break;
     case YALNIX_TTY_READ:
         /*code*/
@@ -129,7 +132,7 @@ void TrapMemoryHandler(ExceptionInfo *info) {
         TracePrintf(LOG, "stack pointer addr: %d\n",stk_bound_vpn);
         TracePrintf(LOG, "brk addr %p, brk vpn %d\n", runningPCB->brk, brk_vpn);
 
-        Exit(ERROR);
+        MyExit(ERROR);
 
         return Halt();
     }

@@ -68,10 +68,10 @@ SavedContext *test_init(SavedContext *ctxp, void *p1, void *p2) {
 }
 
 SavedContext *switch_func(SavedContext *ctxp, void *p1, void *p2) {
-    TracePrintf(LOG, "Enter Delay context switch!\n");
+    TracePrintf(LOG, "Enter context switch!\n");
     PCB *pcb1 = (PCB *)p1;
     PCB *pcb2 = (PCB *)p2;
-    
+
     if (pcb1->state == TERMINATED) {
         TracePrintf(LOG, "Process %d is terminated\n", pcb1->pid);
         int i;

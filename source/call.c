@@ -10,7 +10,7 @@
 #include "global.h"
 #include "call.h"
 
-int Fork(void) {
+int MyFork(void) {
     // not enough physical pages for child process
     if (!check_enough_pages_fork()) return ERROR;
 
@@ -23,6 +23,7 @@ int Fork(void) {
     else addSibling(runningPCB->child, child);
 
     runningPCB->childNum++;
+    TracePrintf(LOG, "PID %d call Fork, now it have %d child\n", runningPCB->pid, runningPCB->childNum);
 
     child->state = RUNNING;
     child->pid = processId++;
@@ -100,7 +101,7 @@ int MyExec(char *filename, char **argvec, ExceptionInfo *info) {
     return 0;
 }
 
-void Exit(int status) {
+void MyExit(int status) {
     TracePrintf(LOG, "PID %d call Exit\n", runningPCB->pid);
 
     terminateProcess(runningPCB, status);
@@ -110,7 +111,7 @@ void Exit(int status) {
     while(1){}
 }
 
-int Wait(int *status_ptr) {
+int MyWait(int *status_ptr) {
     TracePrintf(LOG, "PID %d call Wait\n", runningPCB->pid);
 
     unsigned long vpn = (unsigned long)((void *)status_ptr + sizeof(int)) >> PAGESHIFT;
@@ -125,14 +126,14 @@ int Wait(int *status_ptr) {
         }
     }
     
-    if (runningPCB->childNum == 0) {
-        TracePrintf(ERR, "No children to wait for\n");
-        return ERROR;
-    }
-
     if (runningPCB->exitChild == NULL) {
+        if (runningPCB->childNum == 0) {
+            TracePrintf(ERR, "pid %d No children to wait for\n", runningPCB->pid);
+            return ERROR;
+        }
+
         runningPCB->state = WAITCHILD;
-        ContextSwitch(switch_func, runningPCB->ctx, (void *)runningPCB, (void *)(READY));
+        ContextSwitch(switch_func, runningPCB->ctx, (void *)runningPCB, (void *)popPCB(READY));
     }
 
     exitChildStatus *exitChild = popExitStatus(runningPCB);
@@ -142,14 +143,16 @@ int Wait(int *status_ptr) {
 
     free(exitChild);
 
+    TracePrintf(LOG, "pid %d wait for pid %d, status %d\n", runningPCB->pid, pid, *status_ptr);
+
     return pid;
 }
 
-int GetPid(void) {
+int MyGetPid(void) {
     return runningPCB->pid;
 }
 
-int Brk(void *addr) {
+int MyBrk(void *addr) {
     unsigned long break_vpn = UP_TO_PAGE((unsigned long)runningPCB->brk) >> PAGESHIFT;
     unsigned long addr_vpn = UP_TO_PAGE((unsigned long)addr) >> PAGESHIFT;
     
@@ -189,7 +192,7 @@ int Brk(void *addr) {
     return 0;
 }
 
-int Delay (int clock_ticks) {
+int MyDelay (int clock_ticks) {
     if (clock_ticks < 0) return ERROR;
     runningPCB->readyTime = clocktime + clock_ticks;
     runningPCB->state = WAITING;
@@ -210,10 +213,10 @@ int Delay (int clock_ticks) {
     return 0;
 }
 
-int TtyRead(int tty_id, void *buf, int len) {
+int MyTtyRead(int tty_id, void *buf, int len) {
     return 0;
 }
 
-int TtyWrite(int tty_id, void *buf, int len) {
+int MyTtyWrite(int tty_id, void *buf, int len) {
     return 0;
 }

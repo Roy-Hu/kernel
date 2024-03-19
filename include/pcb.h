@@ -67,6 +67,8 @@ void addSibling(PCB *parent, PCB *sibling);
 
 void removeSibling(PCB *parent, PCB *child);
 
+void terminateProcess(PCB *pcb, int status);
+
 void pushExitStatus(PCB *pcb, int pid, int status);
 
 exitChildStatus *popExitStatus(PCB *pcb);
