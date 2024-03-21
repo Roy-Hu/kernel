@@ -17,6 +17,7 @@ init3*
 brktest*
 delaytest*
 forktest*
+Makefile
 exectest*
 forkwait*
 trapmemory*

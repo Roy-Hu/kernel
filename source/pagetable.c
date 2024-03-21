@@ -1,4 +1,3 @@
-// #include "pagetable.h"
 #include "pcb.h"
 #include "global.h"
 #include <stddef.h>

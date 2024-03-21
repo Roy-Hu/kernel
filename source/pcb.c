@@ -258,6 +258,7 @@ PCB *createPCB(int pid) {
 
 void addSibling(PCB *parent, PCB *sibling) {
     PCB *cur = parent->child;
+    /* find the last sibling */
     while (cur->sibling != NULL) {
         cur = cur->sibling;
     }
@@ -265,12 +266,13 @@ void addSibling(PCB *parent, PCB *sibling) {
 }
 
 void removeSibling(PCB *parent, PCB *child) {
+    /* remove a sibling */
     PCB *cur = parent->child;
     if (cur == child) {
         parent->child = cur->sibling;
         return;
     }
-
+    /* find the child to be deleted */
     while (cur->sibling != child) {
         cur = cur->sibling;
     }

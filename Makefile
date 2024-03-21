@@ -36,8 +36,8 @@ forkwait0c forkwait0p forkwait1 forkwait1b forkwait1d
 #	make up your kernel, and KERNEL_SRCS should  be a list of
 #	the corresponding source files that make up your kernel.
 #
-KERNEL_OBJS = source/global.o source/call.o source/pagetable.o source/trap.o source/init.o source/pcb.o yalnix.o
-KERNEL_SRCS = source/global.c source/call.c source/pagetable.c source/trap.c source/init.c source/pcb.c yalnix.c
+KERNEL_OBJS = source/global.o source/call.o source/pagetable.o source/trap.o source/init.o source/pcb.o yalnix.o source/terminal.o
+KERNEL_SRCS = source/global.c source/call.c source/pagetable.c source/trap.c source/init.c source/pcb.c yalnix.c source/terminal.c
 
 #
 #	You should not have to modify anything else in this Makefile
