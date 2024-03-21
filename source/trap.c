@@ -3,6 +3,7 @@
 #include <comp421/yalnix.h>
 
 #include "call.h"
+#include "terminal.h"
 #include "trap.h"
 #include "pcb.h"
 #include "global.h"
@@ -41,7 +42,7 @@ void TrapKernelHandler(ExceptionInfo *info) {
         info->regs[0] = MyDelay(info->regs[1]);
         break;
     case YALNIX_TTY_READ:
-        /*code*/
+        info->regs[0]=MyTtyRead((int)(info->regs[1]),(void*)(info->regs[2]),(int)(info->regs[3]));
         break;
     case YALNIX_TTY_WRITE:  
         /* code */
@@ -218,8 +219,16 @@ void TrapMathHandler(ExceptionInfo *info) {
 }
 
 void TrapTtyReceiveHandler(ExceptionInfo *info) {
-    TracePrintf(LOG, "TrapTtyReceiveHandler\n");
-    Halt();
+    int term_id = info->code;
+    int curr_buf_len = my_term[term_id].buf_len;
+    int n_char_received = TtyReceive(term_id, my_term[term_id].read_buf + curr_buf_len, TERMINAL_MAX_LINE);
+    my_term[term_id].buf_len = my_term[term_id].buf_len + n_char_received;
+    /* check if there are blocked terminal waiting for reading for a process*/
+    if (read_queue[term_id] != NULL) {
+        PCB *temp = pop_read_queue(read_queue[term_id]);
+        ContextSwitch(switch_clock_trap, runningPCB->ctx, (void *)runningPCB, (void*)temp);
+    }
+    // nothing waiting for reading, continue executing the current process
 }   
 
 void TrapTtyTransmitHandler(ExceptionInfo *info) {

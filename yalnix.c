@@ -2,6 +2,7 @@
 #include "trap.h"
 #include "pcb.h"
 #include "global.h"
+#include "terminal.h"
 
 #include <stddef.h>
 #include <fcntl.h>
@@ -46,6 +47,9 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size,
 
 	// Initialize the interrupt vector table and REG_VECTOR_BASE privileged machine register
 	initInterruptVectorTable();
+
+    // init term
+    init_term();
 
 	// Initialize the free physical page frames
 	initFreePhysicalFrame();

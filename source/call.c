@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <comp421/yalnix.h>
 
-
+#include "terminal.h"
 #include "pcb.h"
 #include "pagetable.h"
 #include "global.h"
@@ -214,7 +214,37 @@ int MyDelay (int clock_ticks) {
 }
 
 int MyTtyRead(int tty_id, void *buf, int len) {
-    return 0;
+    if (len == 0) return ERROR;
+    int res = 0;
+    /* nothing to read, block the current process */
+    if (my_term[tty_id].buf_len == 0) {
+        // push to read queue and switch to another process
+        add_to_read_queue(runningPCB, read_queue[tty_id]);
+        // switch to another ready process
+        ContextSwitch(switch_func, runningPCB->ctx, (void *)runningPCB, popPCB(READY));
+
+    }
+
+    /* got something to read */
+    if (my_term[tty_id].buf_len > len) {
+        res = len;
+        my_term[tty_id].buf_len = my_term[tty_id].buf_len - len;
+        memcpy(buf, my_term[tty_id].read_buf, len);
+        memcpy(my_term[tty_id].read_buf, my_term[tty_id].read_buf + len, my_term[tty_id].buf_len);
+        PCB* next = pop_read_queue(my_term[tty_id].read_buf);
+        // select the next process to read
+        if (next != NULL)
+            ContextSwitch(switch_func, runningPCB->ctx, (void*)runningPCB, pop_read_queue(read_queue[tty_id]));
+    }
+    else {
+        res = my_term[tty_id].buf_len;
+         memcpy(buf, my_term[tty_id].read_buf, my_term[tty_id].buf_len);
+         my_term[tty_id].buf_len = 0;
+    }
+    runningPCB->state = READY;
+    pushPCB(runningPCB);
+    ContextSwitch(switch_func, runningPCB->ctx, (void*) runningPCB, (void*) popPCB(READY));
+    return res;
 }
 
 int MyTtyWrite(int tty_id, void *buf, int len) {

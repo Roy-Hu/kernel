@@ -8,6 +8,8 @@ PCB *runningPCB, *waitingPCB, *readyPCB, *idlePCB, *initPCB;
 
 PCB *readyPCBTail, *waitingPCBTail;
 
+PCB *read_queue[NUM_TERMINALS];
+
 char swapBuff[PAGESIZE * KERNEL_STACK_PAGES];
 
 void terminateProcess(PCB *pcb, int status) {
@@ -402,3 +404,35 @@ PCB *popPCB(STATE state) {
         break;
     }
 }
+
+/**
+ * Function: pop a process from the reading queue
+ * Usage: plug in starting of the queue
+ * Return: a poped process pcb
+ **/
+PCB *pop_read_queue(PCB *p) {
+    if (p == NULL) return NULL;
+    PCB* ret = p;
+    p = p->next;
+    return ret;
+}
+
+/**
+ * Function: add a process to the reading queue
+ * Usage: plug in the process to add
+ * Return: nothing
+ **/
+void add_to_read_queue(PCB *proc, PCB *Q) {
+    if (Q == NULL) {
+        Q = proc;
+        Q->next = NULL;
+        return;
+    }
+    PCB* curr = Q;
+    while (curr->next != NULL) {
+        curr = curr->next;
+    }
+    curr->next = proc;
+    proc->next = NULL;
+}
+

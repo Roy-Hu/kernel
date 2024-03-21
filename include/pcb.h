@@ -59,6 +59,8 @@ typedef struct pcb {
 
 extern PCB *readyPCBTail, *waitingPCBTail;
 
+extern PCB *read_queue[NUM_TERMINALS];
+
 extern PCB *runningPCB, *waitingPCB, *readyPCB, *idlePCB, *initPCB;
 
 PCB *createPCB(int pid);
@@ -68,6 +70,10 @@ void addSibling(PCB *parent, PCB *sibling);
 void removeSibling(PCB *parent, PCB *child);
 
 void terminateProcess(PCB *pcb, int status);
+
+void add_to_read_queue(PCB *proc, PCB *Q);
+
+PCB *pop_read_queue(PCB *p);
 
 void pushExitStatus(PCB *pcb, int pid, int status);
 
