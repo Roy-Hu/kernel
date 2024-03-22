@@ -422,13 +422,15 @@ PCB *pop_read_queue(PCB *p) {
  * Usage: plug in the process to add
  * Return: nothing
  **/
-void add_to_read_queue(PCB *proc, PCB *Q) {
-    if (Q == NULL) {
-        Q = proc;
-        Q->next = NULL;
+void add_to_read_queue(PCB *proc, int term_id) {
+    if (read_queue[term_id] == NULL) {
+        TracePrintf(LOG, "this terminal's reading queue is null\n");
+        read_queue[term_id] = proc;
+        TracePrintf(LOG, "adding process: %d to the reading queue\n", read_queue[term_id]->pid);
+        read_queue[term_id]->next = NULL;
         return;
     }
-    PCB* curr = Q;
+    PCB* curr = read_queue[term_id];
     while (curr->next != NULL) {
         curr = curr->next;
     }

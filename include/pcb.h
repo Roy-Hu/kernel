@@ -71,7 +71,7 @@ void removeSibling(PCB *parent, PCB *child);
 
 void terminateProcess(PCB *pcb, int status);
 
-void add_to_read_queue(PCB *proc, PCB *Q);
+void add_to_read_queue(PCB *proc, int term_id);
 
 PCB *pop_read_queue(PCB *p);
 

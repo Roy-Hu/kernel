@@ -42,6 +42,7 @@ void TrapKernelHandler(ExceptionInfo *info) {
         info->regs[0] = MyDelay(info->regs[1]);
         break;
     case YALNIX_TTY_READ:
+        TracePrintf(LOG, "TTY Read\n");
         info->regs[0]=MyTtyRead((int)(info->regs[1]),(void*)(info->regs[2]),(int)(info->regs[3]));
         break;
     case YALNIX_TTY_WRITE:  
@@ -219,13 +220,16 @@ void TrapMathHandler(ExceptionInfo *info) {
 }
 
 void TrapTtyReceiveHandler(ExceptionInfo *info) {
+    TracePrintf(LOG, "TrapTtyReceivetHandler\n");
     int term_id = info->code;
     int curr_buf_len = my_term[term_id].buf_len;
     int n_char_received = TtyReceive(term_id, my_term[term_id].read_buf + curr_buf_len, TERMINAL_MAX_LINE);
     my_term[term_id].buf_len = my_term[term_id].buf_len + n_char_received;
+    TracePrintf(LOG, "Terminal: %d received: %d chars. Received complete\n", term_id, n_char_received);
     /* check if there are blocked terminal waiting for reading for a process*/
     if (read_queue[term_id] != NULL) {
         PCB *temp = pop_read_queue(read_queue[term_id]);
+        TracePrintf(LOG, "Terminal: %d waiting for reading\n", term_id);
         ContextSwitch(switch_clock_trap, runningPCB->ctx, (void *)runningPCB, (void*)temp);
     }
     // nothing waiting for reading, continue executing the current process

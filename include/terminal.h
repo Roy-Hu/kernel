@@ -5,7 +5,7 @@
 #include <stddef.h>
 
 typedef struct term {
-    char *read_buf;
+    char read_buf[TERMINAL_MAX_LINE];
     char *write_buf;
     int buf_len;
 } Terminal;

@@ -214,12 +214,15 @@ int MyDelay (int clock_ticks) {
 }
 
 int MyTtyRead(int tty_id, void *buf, int len) {
+    TracePrintf(LOG, "Enter MyttyRead call\n");
     if (len == 0) return ERROR;
     int res = 0;
+     TracePrintf(LOG, "%d buff len: %d\n",tty_id, my_term[tty_id].buf_len);
     /* nothing to read, block the current process */
     if (my_term[tty_id].buf_len == 0) {
+        TracePrintf(LOG, "add terminal: %d to read_queue\n",tty_id);
         // push to read queue and switch to another process
-        add_to_read_queue(runningPCB, read_queue[tty_id]);
+        add_to_read_queue(runningPCB, tty_id);
         // switch to another ready process
         ContextSwitch(switch_func, runningPCB->ctx, (void *)runningPCB, popPCB(READY));
 
