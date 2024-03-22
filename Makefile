@@ -25,7 +25,7 @@
 #	For example, the Makefile will make test1 out of test1.c,
 #	if you have a file named test1.c in this directory.
 #
-ALL = yalnix idle init ttyread1
+ALL = yalnix idle init ttywrite3
 
 # forkwait0c cannot pass
 

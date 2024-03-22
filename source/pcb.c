@@ -10,6 +10,9 @@ PCB *readyPCBTail, *waitingPCBTail;
 
 PCB *read_queue[NUM_TERMINALS];
 
+PCB *write_queue[NUM_TERMINALS];
+
+
 char swapBuff[PAGESIZE * KERNEL_STACK_PAGES];
 
 void terminateProcess(PCB *pcb, int status) {
@@ -418,6 +421,18 @@ PCB *pop_read_queue(PCB *p) {
 }
 
 /**
+ * Function: pop a process from the writing queue
+ * Usage: plug in starting of the queue
+ * Return: a poped process pcb
+ **/
+PCB *pop_writing_queue(PCB *p) {
+    if (p == NULL) return NULL;
+    PCB* ret = p;
+    p = p->next;
+    return ret;
+}
+
+/**
  * Function: add a process to the reading queue
  * Usage: plug in the process to add
  * Return: nothing
@@ -431,6 +446,27 @@ void add_to_read_queue(PCB *proc, int term_id) {
         return;
     }
     PCB* curr = read_queue[term_id];
+    while (curr->next != NULL) {
+        curr = curr->next;
+    }
+    curr->next = proc;
+    proc->next = NULL;
+}
+
+/**
+ * Function: add a process to the writing queue
+ * Usage: plug in the process to add
+ * Return: nothing
+ **/
+void add_to_write_queue(PCB *proc, int term_id) {
+    if (write_queue[term_id] == NULL) {
+        TracePrintf(LOG, "this terminal's writing queue is null\n");
+        write_queue[term_id] = proc;
+        TracePrintf(LOG, "adding process: %d to the writing queue\n", write_queue[term_id]->pid);
+        write_queue[term_id]->next = NULL;
+        return;
+    }
+    PCB* curr = write_queue[term_id];
     while (curr->next != NULL) {
         curr = curr->next;
     }

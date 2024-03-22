@@ -215,7 +215,7 @@ int MyDelay (int clock_ticks) {
 
 int MyTtyRead(int tty_id, void *buf, int len) {
     TracePrintf(LOG, "Enter MyttyRead call\n");
-    if (len == 0) return ERROR;
+    if (len < 0) return ERROR;
     int res = 0;
      TracePrintf(LOG, "%d buff len: %d\n",tty_id, my_term[tty_id].buf_len);
     /* nothing to read, block the current process */
@@ -234,10 +234,10 @@ int MyTtyRead(int tty_id, void *buf, int len) {
         my_term[tty_id].buf_len = my_term[tty_id].buf_len - len;
         memcpy(buf, my_term[tty_id].read_buf, len);
         memcpy(my_term[tty_id].read_buf, my_term[tty_id].read_buf + len, my_term[tty_id].buf_len);
-        PCB* next = pop_read_queue(my_term[tty_id].read_buf);
+        PCB* next = pop_read_queue(read_queue[tty_id]);
         // select the next process to read
         if (next != NULL)
-            ContextSwitch(switch_func, runningPCB->ctx, (void*)runningPCB, pop_read_queue(read_queue[tty_id]));
+            ContextSwitch(switch_func, runningPCB->ctx, (void*)runningPCB, (void*)next);
     }
     else {
         res = my_term[tty_id].buf_len;
@@ -251,5 +251,24 @@ int MyTtyRead(int tty_id, void *buf, int len) {
 }
 
 int MyTtyWrite(int tty_id, void *buf, int len) {
-    return 0;
+     TracePrintf(LOG, "Enter MyttyWrite call\n");
+    if (len < 0) return ERROR;
+    /* no process transmitting now */
+    if (my_term[tty_id].trans_proc == NULL) {
+        my_term[tty_id].trans_proc = runningPCB;
+        TtyTransmit(tty_id, buf, len);
+        ContextSwitch(switch_func, runningPCB->ctx, (void*) runningPCB, (void*) popPCB(READY));
+        TracePrintf(LOG, "transmitting completed and switched back\n");
+        my_term[tty_id].trans_proc = NULL;
+        PCB* next = pop_writing_queue(write_queue[tty_id]);
+        if (next != NULL) {
+            ContextSwitch(switch_func, runningPCB->ctx, (void*)runningPCB, (void*) next);
+        }
+    }
+    else {
+        add_to_write_queue(runningPCB, tty_id);
+        ContextSwitch(switch_func, runningPCB->ctx, (void *)runningPCB, popPCB(READY));
+    }
+    return len;
+
 }

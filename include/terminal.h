@@ -3,11 +3,13 @@
 
 #include <comp421/hardware.h>
 #include <stddef.h>
+#include "pcb.h"
 
 typedef struct term {
     char read_buf[TERMINAL_MAX_LINE];
-    char *write_buf;
     int buf_len;
+    /* pointing to the current transmitting process */
+    PCB* trans_proc;
 } Terminal;
 
 void init_term();

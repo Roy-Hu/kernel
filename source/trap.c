@@ -46,8 +46,7 @@ void TrapKernelHandler(ExceptionInfo *info) {
         info->regs[0]=MyTtyRead((int)(info->regs[1]),(void*)(info->regs[2]),(int)(info->regs[3]));
         break;
     case YALNIX_TTY_WRITE:  
-        /* code */
-        break;
+         info->regs[0]=MyTtyWrite((int)(info->regs[1]),(void*)(info->regs[2]),(int)(info->regs[3]));
 
     
     default:
@@ -237,5 +236,8 @@ void TrapTtyReceiveHandler(ExceptionInfo *info) {
 
 void TrapTtyTransmitHandler(ExceptionInfo *info) {
     TracePrintf(LOG, "TrapTtyTransmitHandler\n");
-    Halt();
+    int term_id = info->code;
+    TracePrintf(LOG, "Terminal: %d finished transmiting and switch to process: %d for writing\n", term_id,my_term[term_id].trans_proc->pid);
+    ContextSwitch(switch_clock_trap, runningPCB->ctx, (void*) runningPCB, (void*)(my_term[term_id].trans_proc));
+
 }
