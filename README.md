@@ -1,5 +1,11 @@
 # COMP 521 Lab2  The Yalnix Operating System Kernel
 ## TODO:
+- Maybe need to fix the bugs in wait to passed that test?
+- Review on context swictching functions
+- Review on error handling
+- Clean the style
+- More to be added...
+## Done:
 - <del>Read this document carefully. Try to understand the details described in it, and perhaps read this
 document again. Ask a TA or the instructor if you don’t understand parts of this document. Although
 there are a lot of pages here to read, this document is intended to be very complete and to guide you
@@ -65,13 +71,8 @@ interface would seem to be working correctly.<del>
 - <del>Implement theFork kernel call. If you get this to work you are almost done with the memory system. <del>
 - <del>Implement the Exec kernel call. You have already done something similar by initially loading init. <del>
 - <del>Write another small programthat does not domuch. Call Fork and Exec from your init process, to
-get this third program running as a child of init. Watch for context switches.
-- Implement and test the Exit and Wait kernel calls.
-- Implement the kernel calls related toterminal I/Ohandling. These should be easy at this point, if you
-pay attention to the process address space into which your input needs to go.</del>
-## Issue:
-- Maybe need to fix the bugs in wait to passed that test?
-- Review on context swictching functions
-- Review on error handling
-- Clean the style
-- More to be added...
+get this third program running as a child of init. Watch for context switches.<del>
+- <del>Implement and test the Exit and Wait kernel calls.<del>
+- <del>Implement the kernel calls related toterminal I/Ohandling. These should be easy at this point, if you
+pay attention to the process address space into which your input needs to go.<del>
+
