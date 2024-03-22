@@ -62,14 +62,16 @@ interface would seem to be working correctly.<del>
   likely that you haven’t needed it up to this point, but you may have (in this case implement it earlier).
   - <del>Implement the Brk kernel call and call it from the init process. At this point you have a substantial
   part of the memory management code working. <del>
-- <del>Implement theFork kernel call. If you get this to work you are almost done with the memory system.
-- Implement the Exec kernel call. You have already done something similar by initially loading init. <del>
-### Fork is done, passed all but the last one test given under lab2sample folders. This probably need to be done with trap memory handler.
-- Write another small programthat does not domuch. Call Fork and Exec from your init process, to
+- <del>Implement theFork kernel call. If you get this to work you are almost done with the memory system. <del>
+- <del>Implement the Exec kernel call. You have already done something similar by initially loading init. <del>
+- <del>Write another small programthat does not domuch. Call Fork and Exec from your init process, to
 get this third program running as a child of init. Watch for context switches.
 - Implement and test the Exit and Wait kernel calls.
 - Implement the kernel calls related toterminal I/Ohandling. These should be easy at this point, if you
-pay attention to the process address space into which your input needs to go.
-- Look at your work and wonder in amazement at the uncertain, frustrating, and rewarding road you
-have traveled.
+pay attention to the process address space into which your input needs to go.</del>
 ## Issue:
+- Maybe need to fix the bugs in wait to passed that test?
+- Review on context swictching functions
+- Review on error handling
+- Clean the style
+- More to be added...
