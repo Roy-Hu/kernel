@@ -1,8 +1,8 @@
 # COMP 521 Lab2  The Yalnix Operating System Kernel
 ## TODO:
-- Maybe need to fix the bugs in wait to passed that test?
 - Review on context swictching functions
-- Review on error handling
+- **Review on error handling**
+- **Rewrite a readme to give an introduction of our structure**
 - Clean the style
 - More to be added...
 ## Done:
