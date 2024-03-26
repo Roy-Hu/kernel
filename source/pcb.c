@@ -52,7 +52,7 @@ SavedContext *test_init(SavedContext *ctxp, void *p1, void *p2) {
 
     int vpn = ((unsigned long)pcb2->ptr0 - VMEM_1_BASE) >> PAGESHIFT;
     unsigned long paddr = (RCS421RegVal)(ptr1[vpn].pfn << PAGESHIFT) | (((unsigned long)pcb2->ptr0) & PAGEOFFSET);
-    pcb2->pt0addr = paddr;
+    // pcb2->pt0addr = paddr;
 
     WriteRegister(REG_PTR0,(RCS421RegVal) paddr);
 
@@ -60,14 +60,12 @@ SavedContext *test_init(SavedContext *ctxp, void *p1, void *p2) {
 
     TracePrintf(INF, "New ptr0 %p\n", (void*)pcb2->ptr0);
 
-    // copy pcb1's kernel stack to pcb2's kernel stack?
+    // copy pcb1's kernel stack to pcb2's kernel stack
     memcpy((void*)KERNEL_STACK_BASE, swapBuff, PAGESIZE * KERNEL_STACK_PAGES);
     memcpy(pcb2->ctx, pcb1->ctx, sizeof(SavedContext));
 
     runningPCB = pcb2;
     runningPCB->state = RUNNING;
-
-    TracePrintf(TRC, "Arrived Here\n");
 
     return pcb2->ctx;
 }
@@ -88,8 +86,7 @@ SavedContext *switch_func(SavedContext *ctxp, void *p1, void *p2) {
 
         freeExitStatus(pcb1);
 
-        // TODO: free pcb1->ptr0
-        // free(pcb1->ptr0);
+        /* free the space used by pcb1 */
         free(pcb1->ctx);
         free(pcb1);
     }
@@ -127,10 +124,9 @@ SavedContext *switch_func(SavedContext *ctxp, void *p1, void *p2) {
 }
 
 /*
- *if no p2, return p1.
- *if there is p2, push p1 to ready queue
- *if p1 is not idle.
- *if it is idle, just continuing executing p1
+ * if no p2, return p1.
+ * if there is p2, push p1 to ready queue
+ * if p1 is not idle.
  */
 SavedContext *switch_clock_trap(SavedContext *ctxp, void *p1, void *p2) {
     TracePrintf(LOG, "Switch Clock Trap\n");
@@ -161,15 +157,14 @@ SavedContext *switch_clock_trap(SavedContext *ctxp, void *p1, void *p2) {
  * switch function for fork call
  * p1: running process
  * p2: child process
- * 
- * **/
+ **/
 SavedContext *switch_fork(SavedContext *ctxp, void *p1, void *p2) {
     PCB *pcb1 = (PCB *)p1;
     PCB *pcb2 = (PCB *)p2;
     int i;
 
-    TracePrintf(LOG, "Enter Fork Context Switch Call!\n");
-    /*need to check for enough memory first*/
+    TracePrintf(LOG, "Enter switch_fork function for ctx switch!\n");
+    /* whether enough memory is checked in the forkcall function */
     /*copy PTR from parent to child*/
     for (i = 0; i < PAGE_TABLE_LEN; ++i) {
         pcb2->ptr0[i].valid = 0;
@@ -186,7 +181,7 @@ SavedContext *switch_fork(SavedContext *ctxp, void *p1, void *p2) {
 
     TracePrintf(LOG, "finished copying ptr0 of pcb1 to child process!\n");
 
-    /*find an unsed ptr0 from parent*/
+    /* find an unsed ptr0 from parent */
     int brk_vpn = UP_TO_PAGE(USER_STACK_LIMIT) >> PAGESHIFT;
 
     TracePrintf(TRC, "new brk_vpn for swap: %d! And its valid bit is: %d\n",brk_vpn, pcb1->ptr0[brk_vpn].valid);
@@ -234,7 +229,7 @@ PCB *createPCB(int pid) {
     if (pid == IDLE_PID) {
         TracePrintf(LOG, "Create Idle PCB\n");
         // Why the first process is idle instead of init?
-        pcb->pt0addr = INIT_PT0_PFN << PAGESHIFT;
+        // pcb->pt0addr = INIT_PT0_PFN << PAGESHIFT;
         /* address of the idle process*/
         pcb->ptr0 = ptr0;
         pcb->brk = MEM_INVALID_PAGES;
@@ -411,7 +406,7 @@ PCB *popPCB(STATE state) {
 /**
  * Function: pop a process from the reading queue
  * Usage: plug in starting of the queue
- * Return: a poped process pcb
+ * Return: a poped process pcb if given pcb isn't NULL
  **/
 PCB *pop_read_queue(PCB *p) {
     if (p == NULL) return NULL;
@@ -423,7 +418,7 @@ PCB *pop_read_queue(PCB *p) {
 /**
  * Function: pop a process from the writing queue
  * Usage: plug in starting of the queue
- * Return: a poped process pcb
+ * Return: a poped process pcb if given pcb isn't NULL
  **/
 PCB *pop_writing_queue(PCB *p) {
     if (p == NULL) return NULL;

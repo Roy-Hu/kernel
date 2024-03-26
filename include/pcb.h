@@ -25,7 +25,7 @@ typedef struct pcb {
     int pid;
 
     // physical address of pt0
-    int pt0addr;
+    // int pt0addr;
 
     // pt0 >> PAGESHIFT
     int pt0pfn;

@@ -38,8 +38,7 @@ int MyFork(void) {
 
     ContextSwitch(switch_fork,runningPCB->ctx, (void*)runningPCB, (void*) child);
 
-    if (runningPCB == child) return 0;
-    
+    if (runningPCB == child) return 0;  
     else return child->pid;
 }
 
@@ -169,13 +168,12 @@ int MyBrk(void *addr) {
     } else {
         // TracePrintf(LOG, "Allocating %d to %d\n", break_vpn, addr_vpn);
         TracePrintf(TRC, "freePFN %d\n",physicalFrames.freePFN);
-        
+        /* pfns needed by addr are greater than current pfn we had */
         if (addr_vpn - break_vpn > physicalFrames.freePFN) return ERROR;
-        // TracePrintf(LOG, "test\n");
         // why MEM_INVALID_PAGES to addr_vpn instead of break_vpn to addr_vpn?
         unsigned long i = MEM_INVALID_PAGES;
         for (; i < addr_vpn; ++i)
-           
+            // find a valid page
             if (!runningPCB->ptr0[i].valid) {
                 // TracePrintf(LOG, "test%d\n", i);
                 int pfn = getFreePhysicalFrame();
@@ -215,7 +213,7 @@ int MyDelay (int clock_ticks) {
 
 int MyTtyRead(int tty_id, void *buf, int len) {
     TracePrintf(LOG, "Enter MyttyRead call\n");
-    if (len < 0) return ERROR;
+    if (len < 0 || buf == NULL) return ERROR;
     int res = 0;
      TracePrintf(LOG, "%d buff len: %d\n",tty_id, my_term[tty_id].buf_len);
     /* nothing to read, block the current process */
@@ -228,14 +226,14 @@ int MyTtyRead(int tty_id, void *buf, int len) {
 
     }
 
-    /* got something to read */
+    /* had something to read */
     if (my_term[tty_id].buf_len > len) {
         res = len;
         my_term[tty_id].buf_len = my_term[tty_id].buf_len - len;
         memcpy(buf, my_term[tty_id].read_buf, len);
         memcpy(my_term[tty_id].read_buf, my_term[tty_id].read_buf + len, my_term[tty_id].buf_len);
         PCB* next = pop_read_queue(read_queue[tty_id]);
-        // select the next process to read
+        // select the next process that is ready to read
         if (next != NULL)
             ContextSwitch(switch_func, runningPCB->ctx, (void*)runningPCB, (void*)next);
     }
@@ -252,7 +250,7 @@ int MyTtyRead(int tty_id, void *buf, int len) {
 
 int MyTtyWrite(int tty_id, void *buf, int len) {
      TracePrintf(LOG, "Enter MyttyWrite call\n");
-    if (len < 0) return ERROR;
+    if (buf == NULL || len < 0) return ERROR;
     /* no process transmitting now */
     if (my_term[tty_id].trans_proc == NULL) {
         my_term[tty_id].trans_proc = runningPCB;

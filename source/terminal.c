@@ -1,4 +1,4 @@
-/* source file for functions in terminal*/
+/* source file for functions in terminal */
 #include "terminal.h"
 #include <comp421/hardware.h>
 #include "pcb.h"

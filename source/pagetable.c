@@ -110,7 +110,9 @@ int check_enough_pages_fork() {
 }
 
 /**
- * return value: user stack boundary address
+ * Find the boundary of the current user stack
+ * starting from USER_STACK_LIMIT
+ * return value: user stack boundary address (virtual)
 */
 int user_stack_vpn() {
     int i = (DOWN_TO_PAGE(USER_STACK_LIMIT) >> PAGESHIFT) - 1;

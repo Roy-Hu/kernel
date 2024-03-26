@@ -45,10 +45,10 @@ void TrapKernelHandler(ExceptionInfo *info) {
         TracePrintf(LOG, "TTY Read\n");
         info->regs[0]=MyTtyRead((int)(info->regs[1]),(void*)(info->regs[2]),(int)(info->regs[3]));
         break;
-    case YALNIX_TTY_WRITE:  
-         info->regs[0]=MyTtyWrite((int)(info->regs[1]),(void*)(info->regs[2]),(int)(info->regs[3]));
+    case YALNIX_TTY_WRITE:
+        TracePrintf(LOG, "TTY Write\n");
+        info->regs[0]=MyTtyWrite((int)(info->regs[1]),(void*)(info->regs[2]),(int)(info->regs[3]));
 
-    
     default:
         break;
     }
@@ -139,10 +139,16 @@ void TrapMemoryHandler(ExceptionInfo *info) {
     unsigned long trap_vpn = DOWN_TO_PAGE(addr) >> PAGESHIFT;
     int stk_bound_vpn = user_stack_vpn();
 
-    /*address to acquire exceed user stack*/
+    /* address to acquire exceed user stack */
     //if (trap_vpn >= stk_bound_vpn) return ERROR;
+    /**
+     * Things check here:
+     *  1. whether the address needs allocation is greater than the current break
+     *  2. current pages needed to be allocated are less than free PFNs we had
+     *  3. the position of the address is less than user stack boundary
+    **/
     // why stk_bound_vpn - brk_vpn? isn't it stk_bound_vpn - trap_vpn?
-    if (trap_vpn > brk_vpn && (stk_bound_vpn - brk_vpn) < physicalFrames.freePFN && trap_vpn <= stk_bound_vpn) {
+    if (trap_vpn > brk_vpn && (stk_bound_vpn - trap_vpn) < physicalFrames.freePFN && trap_vpn <= stk_bound_vpn) {
         int i = trap_vpn;
         TracePrintf(LOG, "Set user_stack vpn from: %d to %d\n",stk_bound_vpn, trap_vpn);
         for (;i <= stk_bound_vpn; ++i) {
