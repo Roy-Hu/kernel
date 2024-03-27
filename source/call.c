@@ -36,7 +36,10 @@ int MyFork(void) {
     child->next = NULL;
     child->brk = runningPCB->brk;
 
-    ContextSwitch(switch_fork,runningPCB->ctx, (void*)runningPCB, (void*) child);
+    if (ContextSwitch(switch_fork,runningPCB->ctx, (void*)runningPCB, (void*) child) == -1) {
+        TracePrintf(ERR, "ContextSwitch Error\n");
+        return ERROR;
+    }
 
     if (runningPCB == child) return 0;  
     else return child->pid;
@@ -96,8 +99,8 @@ int MyExec(char *filename, char **argvec, ExceptionInfo *info) {
         TracePrintf(ERR, "LoadProgram failed\n");
         return ERROR;
     }
-    
-    return 0;
+
+    // On success, there is no return from this call in the calling program
 }
 
 void MyExit(int status) {
@@ -105,7 +108,10 @@ void MyExit(int status) {
 
     terminateProcess(runningPCB, status);
 
-    ContextSwitch(switch_func, runningPCB->ctx, (void *)runningPCB, (void *)popPCB(READY));
+    if (ContextSwitch(switch_func, runningPCB->ctx, (void *)runningPCB, (void *)popPCB(READY)) == -1) {
+        TracePrintf(ERR, "ContextSwitch Error\n");
+        return ERROR;
+    }
 
     while(1){}
 }
@@ -132,7 +138,10 @@ int MyWait(int *status_ptr) {
         }
 
         runningPCB->state = WAITCHILD;
-        ContextSwitch(switch_func, runningPCB->ctx, (void *)runningPCB, (void *)popPCB(READY));
+        if (ContextSwitch(switch_func, runningPCB->ctx, (void *)runningPCB, (void *)popPCB(READY)) == -1) {
+            TracePrintf(ERR, "ContextSwitch Error\n");
+            return ERROR;
+        }
     }
 
     exitChildStatus *exitChild = popExitStatus(runningPCB);
@@ -190,8 +199,11 @@ int MyBrk(void *addr) {
     return 0;
 }
 
-int MyDelay (int clock_ticks) {
+int MyDelay(int clock_ticks) {
     if (clock_ticks < 0) return ERROR;
+    // lock_ticks is 0, return is immediate.
+    else if (clock_ticks == 0) return 0;
+
     runningPCB->readyTime = clocktime + clock_ticks;
     runningPCB->state = WAITING;
 
@@ -202,10 +214,16 @@ int MyDelay (int clock_ticks) {
     if (readyPCB == NULL) {
         /*No current readyPCB, switch to idle*/
         TracePrintf(LOG, "Switch to idle\n");
-        ContextSwitch(switch_func, runningPCB->ctx, (void *)runningPCB, (void *)idlePCB);
+        if (ContextSwitch(switch_func, runningPCB->ctx, (void *)runningPCB, (void *)idlePCB) == -1) {
+            TracePrintf(ERR, "ContextSwitch Error\n");
+            return ERROR;
+        }
     } else {
         TracePrintf(LOG, "Switch to Process pid: %d\n", readyPCB->pid);
-        ContextSwitch(switch_func, runningPCB->ctx, (void *)runningPCB, (void *)popPCB(READY));
+        if (ContextSwitch(switch_func, runningPCB->ctx, (void *)runningPCB, (void *)popPCB(READY)) == -1) {
+            TracePrintf(ERR, "ContextSwitch Error\n");
+            return ERROR;
+        }
     }
 
     return 0;
@@ -214,59 +232,87 @@ int MyDelay (int clock_ticks) {
 int MyTtyRead(int tty_id, void *buf, int len) {
     TracePrintf(LOG, "Enter MyttyRead call\n");
     if (len < 0 || buf == NULL) return ERROR;
+
     int res = 0;
-     TracePrintf(LOG, "%d buff len: %d\n",tty_id, my_term[tty_id].buf_len);
+    
+    TracePrintf(LOG, "%d buff len: %d\n",tty_id, my_term[tty_id].buf_len);
     /* nothing to read, block the current process */
     if (my_term[tty_id].buf_len == 0) {
         TracePrintf(LOG, "add terminal: %d to read_queue\n",tty_id);
         // push to read queue and switch to another process
         add_to_read_queue(runningPCB, tty_id);
         // switch to another ready process
-        ContextSwitch(switch_func, runningPCB->ctx, (void *)runningPCB, popPCB(READY));
-
+        if (ContextSwitch(switch_func, runningPCB->ctx, (void *)runningPCB, popPCB(READY)) == -1) {
+            TracePrintf(ERR, "ContextSwitch Error\n");
+            return ERROR;
+        }
     }
 
     /* had something to read */
     if (my_term[tty_id].buf_len > len) {
         res = len;
         my_term[tty_id].buf_len = my_term[tty_id].buf_len - len;
+
         memcpy(buf, my_term[tty_id].read_buf, len);
         memcpy(my_term[tty_id].read_buf, my_term[tty_id].read_buf + len, my_term[tty_id].buf_len);
+
         PCB* next = pop_read_queue(read_queue[tty_id]);
         // select the next process that is ready to read
         if (next != NULL)
-            ContextSwitch(switch_func, runningPCB->ctx, (void*)runningPCB, (void*)next);
+            if (ContextSwitch(switch_func, runningPCB->ctx, (void*)runningPCB, (void*)next) == -1) {
+                TracePrintf(ERR, "ContextSwitch Error\n");
+                return ERROR;
+            }
     }
     else {
         res = my_term[tty_id].buf_len;
-         memcpy(buf, my_term[tty_id].read_buf, my_term[tty_id].buf_len);
-         my_term[tty_id].buf_len = 0;
+        memcpy(buf, my_term[tty_id].read_buf, my_term[tty_id].buf_len);
+        my_term[tty_id].buf_len = 0;
     }
+
     runningPCB->state = READY;
     pushPCB(runningPCB);
-    ContextSwitch(switch_func, runningPCB->ctx, (void*) runningPCB, (void*) popPCB(READY));
+    if (ContextSwitch(switch_func, runningPCB->ctx, (void*) runningPCB, (void*) popPCB(READY)) == -1) {
+        TracePrintf(ERR, "ContextSwitch Error\n");
+        return ERROR;
+    }
+
     return res;
 }
 
 int MyTtyWrite(int tty_id, void *buf, int len) {
-     TracePrintf(LOG, "Enter MyttyWrite call\n");
+    TracePrintf(LOG, "Enter MyttyWrite call\n");
     if (buf == NULL || len < 0) return ERROR;
     /* no process transmitting now */
+
     if (my_term[tty_id].trans_proc == NULL) {
         my_term[tty_id].trans_proc = runningPCB;
+
         TtyTransmit(tty_id, buf, len);
-        ContextSwitch(switch_func, runningPCB->ctx, (void*) runningPCB, (void*) popPCB(READY));
+        if (ContextSwitch(switch_func, runningPCB->ctx, (void*) runningPCB, (void*) popPCB(READY)) == -1) {
+            TracePrintf(ERR, "ContextSwitch Error\n");
+            return ERROR;
+        }
+
         TracePrintf(LOG, "transmitting completed and switched back\n");
+
         my_term[tty_id].trans_proc = NULL;
+
         PCB* next = pop_writing_queue(write_queue[tty_id]);
         if (next != NULL) {
-            ContextSwitch(switch_func, runningPCB->ctx, (void*)runningPCB, (void*) next);
+            if (ContextSwitch(switch_func, runningPCB->ctx, (void*)runningPCB, (void*) next) == -1) {
+                TracePrintf(ERR, "ContextSwitch Error\n");
+                return ERROR;
+            }
         }
     }
     else {
         add_to_write_queue(runningPCB, tty_id);
-        ContextSwitch(switch_func, runningPCB->ctx, (void *)runningPCB, popPCB(READY));
+        if (ContextSwitch(switch_func, runningPCB->ctx, (void *)runningPCB, popPCB(READY)) == -1) {
+            TracePrintf(ERR, "ContextSwitch Error\n");
+            return ERROR;
+        }
     }
-    return len;
 
+    return len;
 }

@@ -19,7 +19,6 @@ void freePhysicalFrame(int pfn) {
 /*return the starting address of the new ptr0*/
 PTE* allocateNewPage() {
     PageTable0 *curr = head_ptr0;
-    TracePrintf(TRC, "Enter else if INIT 2\n");
 
     // find the last page_table0
     while (curr != NULL) {
@@ -40,7 +39,6 @@ PTE* allocateNewPage() {
         if (curr->nextPage != NULL) curr = curr->nextPage;
         else break;  
     }
-    TracePrintf(TRC, "Enter else if INIT\n");
 
      /*no empty space, allocate new pt0*/
     PageTable0 *new_pt0 = malloc(sizeof(PageTable0));

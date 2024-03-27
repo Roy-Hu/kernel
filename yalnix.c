@@ -78,7 +78,11 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size,
     initPCB = createPCB(INIT_PID);
 
     /*switch to init*/
-    ContextSwitch(test_init, runningPCB->ctx, runningPCB, initPCB);
+    if (ContextSwitch(test_init, runningPCB->ctx, runningPCB, initPCB) == -1) {
+        TracePrintf(ERR, "ContextSwitch Error\n");
+        return -1;
+    }
+
     TracePrintf(INF, "ContextSwitch to Init\n");
 
     if(runningPCB->pid == IDLE_PID)

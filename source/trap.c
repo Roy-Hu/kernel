@@ -16,9 +16,11 @@ void TrapKernelHandler(ExceptionInfo *info) {
     switch (info->code)
     {
     case YALNIX_FORK:
+        TracePrintf(LOG, "Fork %d\n", runningPCB->pid);
         info->regs[0] = MyFork();
         break;
     case YALNIX_EXEC:
+        TracePrintf(LOG, "Exec %d\n", runningPCB->pid);
         MyExec((char *)info->regs[1], (char **)info->regs[2], info);
         break;
     case YALNIX_EXIT:
@@ -43,12 +45,11 @@ void TrapKernelHandler(ExceptionInfo *info) {
         break;
     case YALNIX_TTY_READ:
         TracePrintf(LOG, "TTY Read\n");
-        info->regs[0]=MyTtyRead((int)(info->regs[1]),(void*)(info->regs[2]),(int)(info->regs[3]));
+        info->regs[0] = MyTtyRead((int)(info->regs[1]),(void*)(info->regs[2]),(int)(info->regs[3]));
         break;
     case YALNIX_TTY_WRITE:
         TracePrintf(LOG, "TTY Write\n");
-        info->regs[0]=MyTtyWrite((int)(info->regs[1]),(void*)(info->regs[2]),(int)(info->regs[3]));
-
+        info->regs[0] = MyTtyWrite((int)(info->regs[1]),(void*)(info->regs[2]),(int)(info->regs[3]));
     default:
         break;
     }
@@ -58,12 +59,10 @@ void TrapClockHandler(ExceptionInfo *info) {
     TracePrintf(LOG, "TrapClockHandler\n");
     clocktime++;
     // bool flag = false;
-    TracePrintf(TRC, "previous \n");
 
     /*There are waiting processes, push the waiting process to ready if reached
       time */
     if (waitingPCB != NULL) {
-        TracePrintf(TRC, "Enter first if\n");
         while (waitingPCB != NULL && waitingPCB->readyTime <= clocktime) {
             // flag = true;
             PCB *pcb = popPCB(WAITING);
@@ -79,7 +78,10 @@ void TrapClockHandler(ExceptionInfo *info) {
 
     if (ready != NULL) TracePrintf(LOG, "Wake PCB pid: %d\n", ready->pid);
         
-    ContextSwitch(switch_clock_trap, runningPCB->ctx, (void *)runningPCB, ready);
+    if (ContextSwitch(switch_clock_trap, runningPCB->ctx, (void *)runningPCB, ready) == -1) {
+        TracePrintf(ERR, "ContextSwitch Error\n");
+        return ERROR;
+    }
 }
 
 void TrapIllegalHandler(ExceptionInfo *info) {
@@ -187,7 +189,6 @@ void TrapMemoryHandler(ExceptionInfo *info) {
 
         return Halt();
     }
-    // Halt();
 }
 
 void TrapMathHandler(ExceptionInfo *info) {
@@ -235,7 +236,10 @@ void TrapTtyReceiveHandler(ExceptionInfo *info) {
     if (read_queue[term_id] != NULL) {
         PCB *temp = pop_read_queue(read_queue[term_id]);
         TracePrintf(LOG, "Terminal: %d waiting for reading\n", term_id);
-        ContextSwitch(switch_clock_trap, runningPCB->ctx, (void *)runningPCB, (void*)temp);
+        if (ContextSwitch(switch_clock_trap, runningPCB->ctx, (void *)runningPCB, (void*)temp) == -1) {
+            TracePrintf(ERR, "ContextSwitch Error\n");
+            return ERROR;
+        }
     }
     // nothing waiting for reading, continue executing the current process
 }   
@@ -244,6 +248,8 @@ void TrapTtyTransmitHandler(ExceptionInfo *info) {
     TracePrintf(LOG, "TrapTtyTransmitHandler\n");
     int term_id = info->code;
     TracePrintf(LOG, "Terminal: %d finished transmiting and switch to process: %d for writing\n", term_id,my_term[term_id].trans_proc->pid);
-    ContextSwitch(switch_clock_trap, runningPCB->ctx, (void*) runningPCB, (void*)(my_term[term_id].trans_proc));
-
+    if (ContextSwitch(switch_clock_trap, runningPCB->ctx, (void*) runningPCB, (void*)(my_term[term_id].trans_proc)) == -1) {
+        TracePrintf(ERR, "ContextSwitch Error\n");
+        return ERROR;
+    }
 }
