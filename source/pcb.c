@@ -259,7 +259,7 @@ PCB *createPCB(int pid) {
 void addSibling(PCB *parent, PCB *sibling) {
     PCB *cur = parent->child;
     /* find the last sibling */
-    while (cur->sibling != NULL) {
+    while (cur != NULL && cur->sibling != NULL) {
         cur = cur->sibling;
     }
     cur->sibling = sibling;

@@ -20,7 +20,7 @@ int MyFork(void) {
     child->parent = runningPCB;
 
     if (runningPCB->child == NULL) runningPCB->child = child;
-    else addSibling(runningPCB->child, child);
+    else addSibling(runningPCB, child);
 
     runningPCB->childNum++;
     TracePrintf(LOG, "PID %d call Fork, now it have %d child\n", runningPCB->pid, runningPCB->childNum);
