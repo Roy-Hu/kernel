@@ -25,7 +25,11 @@
 #	For example, the Makefile will make test1 out of test1.c,
 #	if you have a file named test1.c in this directory.
 #
-ALL = yalnix idle init ttywrite1
+ALL = yalnix idle init console shell \
+	  init1 init2 init3 bigstack blowstack brktest console delaytest \
+	  forktest0 forktest1 forktest1b forktest2 forktest2b forktest3 forkwait0c forkwait0p \
+	  forkwait1 forkwait1b forkwait1c forkwait1d shell trapillegal trapmath trapmemory \
+	  ttyread1 ttywrite1 ttywrite2 ttywrite3
 
 # forkwait0c cannot pass
 

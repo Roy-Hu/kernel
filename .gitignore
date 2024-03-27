@@ -23,9 +23,9 @@ forkwait*
 trapmemory*
 bigstack*
 blowstack*
-console*
+console
 brktest*
-shell*
+shell
 tty*
 trapillegal*
 trapmath*
