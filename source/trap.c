@@ -131,6 +131,10 @@ void TrapIllegalHandler(ExceptionInfo *info) {
         default:
             break;
     }
+
+    MyExit(ERROR);
+    
+    return Halt();
 }
 
 void TrapMemoryHandler(ExceptionInfo *info) {
