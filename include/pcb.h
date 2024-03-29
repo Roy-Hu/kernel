@@ -24,12 +24,6 @@ typedef struct exitChildStatus {
 typedef struct pcb {
     int pid;
 
-    // physical address of pt0
-    // int pt0addr;
-
-    // pt0 >> PAGESHIFT
-    int pt0pfn;
-    
     int brk;
 
     struct pcb *parent;
@@ -48,7 +42,6 @@ typedef struct pcb {
     
     int readyTime;
 
-    // ptr0
     PTE *ptr0;
     
     SavedContext* ctx;

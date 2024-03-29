@@ -1,22 +1,66 @@
-These sample Yalnix user programs are for your enjoyment in testing
-your Yalnix kernel.  Some of the sample programs print out messages
-(e.g., either with printf and/or TracePrintf) explaining some of what
-they are doing, but in all cases, the best description of what each
-sample program does is the source code for each.  If you have any
-questions about any of the sample programs after reading the source
-code, let us know.
+# COMP 521 Lab2  The Yalnix Operating System Kernel
 
-One note of explanation on three of the sample programs:
+### Introduction
 
- - init
- - console
- - shell
+Yalnix is an operating system kernel running on a simulated computer system hardware RCS421. In this project, we have implemented several kernel calls and traps, memory management, context switch, bootstrapping, and loading user programs.
 
-These three programs go together.  The "init" program can be used as
-your kernel's init program, which then starts the "console" program
-on TTY_CONSOLE and starts "shell" on each other terminal.  The shell
-program acts (in a simple way) like a familiar shell.  When the
-shell program exits, init collects that process's exit status and
-starts a new shell on that same terminal.  When the console process
-exits, the init process collects that process's exit status and
-Halts Yalnix.
+### Authors
+
+* Chien-An Hu(ch155), Qiyuan Yang(qy28)
+
+### Structures
+The most important stucture we create is the pcb. This structure encapsulates all necessary information about control and manage processes. Here is what pcb contains
+- pid: Process ID
+- brk: The break's address for the heap in page table 0
+- parent: Pointer to this process's parent PCB.
+- child: Pointer to one of this process's children PCBs.
+- sibling: Pointer to the next sibling PCB in a linked list of siblings. This allows a parent process to track all of its children.
+- childNum: Number of children that the process has.
+- exitChild: A pointer to a structure that holds the exit status of the child process.
+- stackTop: The top address of the stack.
+- state: The current state of the process, include READY, RUNNING, WAITING, TERMINATED, etc.
+- readyTime: The time at which the process becomes ready. This can be used for scheduling decisions.
+- ptr0: Pointer to the process's pte.
+- ctx: Pointer to a SavedContext structure,include process's registers and other critical state information.
+- next: Pointer to the next PCB in a linked list, used to manage ready or waiting queues of processes.
+
+### Source
+#### init.c 
+The `init.c` file contains essential functions required for bootstrapping the system and initializing the kernel. Key functionalities include:
+
+- Interrupt Vector Table Initialization: Sets up the interrupt vector table to handle interrupts and exceptions efficiently.
+- Physical Frames Initialization: Allocates and manages free physical frames for system processes and kernel components.
+- Page Tables Initialization: Establishes the initial page tables required for virtual memory management.
+  
+#### pagetable.c 
+The `pagetable.c` file includes functions critical for managing the page table, which is pivotal for memory allocation and management. Key features are:
+
+- Page Table Allocation: Allocates memory for new page tables, facilitating the expansion of virtual memory as needed.
+- Frame Management: Includes functions to allocate, free, and manage frames within the system, ensuring efficient memory usage.
+- PTE Setup: Provides mechanisms to set up and manage page table entries, allowing for detailed control over memory access and permissions.
+
+#### pcb.c
+The `pcb.c` file includes functions for creating, managing, and terminating processes. It handles the intricacies of process state transitions, including ready, running, waiting, and terminated states. Additionally, it manages queues for ready and waiting processes, as well as read and write queues for terminal I/O operations.
+
+- Process Creation and Termination: Create new PCBs for processes and handle their termination, including cleaning up resources and updating parent-child relationships.
+- Context Switching: Context switching to transition between processes, supporting operations like fork, clock interrupts, and explicit switches.
+- Queue Management: Manages multiple queues to organize processes based on their states (ready, waiting) and activities (reading from or writing to terminals).
+- Parent-Child Management: Manage parent and child processes, handling exit statuses and ensuring proper state transitions.
+
+#### trap.c
+The `trap.c` file contains the handlers for different types of traps, including system calls, clock interrupts, illegal operations, memory access violations, mathematical errors, and terminal I/O operations.
+
+- TrapKernelHandler: Handles system calls for process control (FORK, EXEC, EXIT, WAIT), memory management (BRK), process identification (GETPID), scheduling (DELAY), and terminal I/O (TTY_READ, TTY_WRITE).
+- TrapClockHandler: Manages clock interrupts, updating the system time and moving processes between waiting and ready queues as appropriate.
+- TrapIllegalHandler: Catches illegal instructions or operations performed by user programs, including illegal opcodes, operands, addressing modes, software traps, and privileged instructions.
+- TrapMemoryHandler: Handles memory access violations and page faults, performs dynamic memory allocation, and protects against unauthorized access.
+- TrapMathHandler: Addresses errors related to mathematical operations, such as integer divide by zero, overflow, underflow, and invalid floating-point operations.
+- TrapTtyReceiveHandler: Manages terminal input operations, reading from terminal devices and handling input-related interrupts.
+- TrapTtyTransmitHandler: Handles terminal output operations, managing the transmission of data to terminal devices and related interrupts.
+
+#### terminal.c
+The `terminal.c` file initialization global variable use by the terminal.
+
+#### global.c
+The `global.c` file contains global variable use by the kernel.
+
